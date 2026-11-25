@@ -41,6 +41,14 @@ export interface ContextMenuItem<T extends string = string> {
   children?: readonly ContextMenuItem<T>[];
 }
 
+export interface DesktopEditContextMenuRequest {
+  readonly requestId: string;
+  readonly items: readonly ContextMenuItem[];
+  /** CSS pixels in the window's viewport. */
+  readonly position: { readonly x: number; readonly y: number };
+  readonly source: ContextMenuSource;
+}
+
 export type QuitShortcutHintEvent =
   | { readonly state: "down"; readonly mode: Exclude<QuitConfirmationMode, "direct"> }
   | { readonly state: "up" };
@@ -1256,6 +1264,13 @@ export interface DesktopBridge {
   probeRemoteEditors: () => Promise<readonly EditorId[]>;
   pasteAsText: () => Promise<void>;
   onMenuAction: (listener: (action: string) => void) => () => void;
+  /**
+   * The main process hands the text editing menu (cut, copy, paste, spelling) to the renderer,
+   * which draws it like the app's own menus and answers with the picked item. Optional while
+   * older desktop shells can host a newer web client.
+   */
+  onEditContextMenu?: (listener: (request: DesktopEditContextMenuRequest) => void) => () => void;
+  resolveEditContextMenu?: (requestId: string, itemId: string | null) => Promise<void>;
   onSnapShotEvent: (listener: (event: DesktopSnapShotEvent) => void) => () => void;
   onQuitShortcut: (listener: (event: QuitShortcutHintEvent) => void) => () => void;
   getWindowFullscreenState: () => boolean;

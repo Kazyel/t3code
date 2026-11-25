@@ -27,6 +27,7 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Ref from "effect/Ref";
 import * as DesktopState from "../../app/DesktopState.ts";
+import * as EditContextMenu from "../../window/EditContextMenu.ts";
 
 import * as DesktopBackendConfiguration from "../../backend/DesktopBackendConfiguration.ts";
 import * as DesktopBackendManager from "../../backend/DesktopBackendManager.ts";
@@ -525,6 +526,17 @@ export const pasteAsText = DesktopIpc.makeIpcMethod({
       focused.paste();
     }
   }),
+});
+
+export const resolveEditContextMenu = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.RESOLVE_EDIT_CONTEXT_MENU_CHANNEL,
+  payload: Schema.Struct({ requestId: Schema.String, itemId: Schema.NullOr(Schema.String) }),
+  result: Schema.Void,
+  handler: (input, event) =>
+    Effect.sync(() => {
+      if (event !== undefined)
+        EditContextMenu.resolve(event.sender.id, input.requestId, input.itemId);
+    }),
 });
 
 export const revealWindow = DesktopIpc.makeIpcMethod({

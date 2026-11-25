@@ -1,7 +1,11 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
-import { DEFAULT_CLIENT_SETTINGS, DesktopSnapShotId } from "@t3tools/contracts";
+import {
+  DEFAULT_CLIENT_SETTINGS,
+  DesktopSnapShotId,
+  type DesktopEditContextMenuRequest,
+} from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
@@ -38,6 +42,7 @@ import * as DesktopAssets from "../app/DesktopAssets.ts";
 import * as DesktopConfig from "../app/DesktopConfig.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
 import * as DesktopPrimaryPaste from "../app/DesktopPrimaryPaste.ts";
+import * as EditContextMenu from "./EditContextMenu.ts";
 import * as DesktopState from "../app/DesktopState.ts";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
 import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
@@ -102,6 +107,7 @@ function makeFakeBrowserWindow() {
     }),
     once: vi.fn<(eventName: string, listener: (...args: readonly unknown[]) => void) => void>(),
     openDevTools: vi.fn(),
+    paste: vi.fn(),
     reload: vi.fn(),
     reloadIgnoringCache: vi.fn(),
     replaceMisspelling: vi.fn(),
@@ -153,6 +159,8 @@ function makeFakeBrowserWindow() {
     loadURL: window.loadURL,
     maximize: window.maximize,
     openDevTools: webContents.openDevTools,
+    paste: webContents.paste,
+    replaceMisspelling: webContents.replaceMisspelling,
     reload: webContents.reload,
     reloadIgnoringCache: webContents.reloadIgnoringCache,
     toggleDevTools: webContents.toggleDevTools,
@@ -1701,6 +1709,66 @@ describe("DesktopWindow", () => {
           return callback.mock.lastCall?.[0];
         });
         assert.deepEqual(answers, [false, true]);
+      }).pipe(Effect.provide(layer));
+    }),
+  );
+
+  it.effect("hands the text editing menu to the renderer off macOS and runs the picked item", () =>
+    Effect.gen(function* () {
+      const fakeWindow = makeFakeBrowserWindow();
+      const layer = layerTest({
+        window: fakeWindow.window,
+        createCount: yield* Ref.make(0),
+        mainWindow: yield* Ref.make<Option.Option<Electron.BrowserWindow>>(Option.none()),
+        platform: "linux",
+        onPopupTemplate: () => Effect.die("the native menu opened"),
+      });
+
+      yield* Effect.gen(function* () {
+        const desktopWindow = yield* DesktopWindow.DesktopWindow;
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+
+        const contextMenu = fakeWindow.webContentsListeners.get("context-menu");
+        if (!contextMenu) return yield* Effect.die("context-menu listener was not registered");
+        contextMenu(
+          { preventDefault: vi.fn() },
+          {
+            x: 40,
+            y: 60,
+            menuSourceType: "mouse",
+            misspelledWord: "teh",
+            dictionarySuggestions: ["the"],
+            linkURL: "",
+            mediaType: "none",
+            editFlags: { canCut: false, canCopy: true, canPaste: true, canSelectAll: true },
+          },
+        );
+
+        const call = vi
+          .mocked(fakeWindow.send)
+          .mock.calls.find(([channel]) => channel === "desktop:edit-context-menu");
+        if (!call) return yield* Effect.die("the edit menu was not sent to the renderer");
+        const request = call[1] as DesktopEditContextMenuRequest;
+        assert.deepEqual(request.position, { x: 40, y: 60 });
+        assert.equal(request.source, "mouse");
+        assert.deepEqual(
+          request.items.map((item) => [item.label, item.disabled ?? false, item.separatorBefore]),
+          [
+            ["the", false, undefined],
+            ["Cut", true, true],
+            ["Copy", false, undefined],
+            ["Paste", false, undefined],
+            ["Select All", false, undefined],
+          ],
+        );
+
+        const pasteId = request.items.find((item) => item.label === "Paste")!.id;
+        EditContextMenu.resolve(2, request.requestId, pasteId);
+        assert.equal(fakeWindow.paste.mock.calls.length, 0, "another renderer cannot answer");
+        EditContextMenu.resolve(1, request.requestId, pasteId);
+        EditContextMenu.resolve(1, request.requestId, pasteId);
+        assert.equal(fakeWindow.paste.mock.calls.length, 1);
+        assert.equal(fakeWindow.replaceMisspelling.mock.calls.length, 0);
       }).pipe(Effect.provide(layer));
     }),
   );

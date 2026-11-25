@@ -5,6 +5,7 @@ import "@fontsource-variable/inter";
 import "./index.css";
 
 import { trackKeyboardLayout } from "./keyboardLayout";
+import { installDesktopEditContextMenu } from "./contextMenuFallback";
 import { hasCloudPublicConfig } from "./cloud/publicConfig";
 import { isElectron } from "./env";
 import { startAppServices } from "./appInit";
@@ -18,6 +19,8 @@ if (timelineGapRecorderEnabled) void import("./components/chat/timelineGapConsol
 
 const stopTrackingKeyboardLayout = trackKeyboardLayout();
 import.meta.hot?.dispose(stopTrackingKeyboardLayout);
+const stopEditContextMenu = installDesktopEditContextMenu();
+import.meta.hot?.dispose(stopEditContextMenu);
 
 const router = startAppServices();
 startSurfaceGrainTiles();

@@ -316,6 +316,18 @@ function isNodeWithinMenuStack(target: EventTarget | null, menuStack: readonly H
   return false;
 }
 
+/** Draws the desktop shell's text editing menu (cut, copy, paste, spelling) with the app's menus. */
+export function installDesktopEditContextMenu(): () => void {
+  const bridge = window.desktopBridge;
+  if (!bridge?.onEditContextMenu || !bridge.resolveEditContextMenu) return () => {};
+  const resolveEditContextMenu = bridge.resolveEditContextMenu;
+  return bridge.onEditContextMenu((request) => {
+    void showContextMenuFallback(request.items, request.position, request.source).then((itemId) =>
+      resolveEditContextMenu(request.requestId, itemId),
+    );
+  });
+}
+
 let activeContextMenuDismiss: ((restoreFocus?: boolean) => void) | null = null;
 
 export function isContextMenuOpen(): boolean {

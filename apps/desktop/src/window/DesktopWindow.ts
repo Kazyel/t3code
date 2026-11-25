@@ -14,7 +14,9 @@ import { msg } from "gt-i18n";
 
 import {
   type ClientSettings,
+  type ContextMenuItem,
   type DatabaseMigrationProgress,
+  type DesktopEditContextMenuRequest,
   type DesktopSnapShotEvent,
   DEFAULT_CLIENT_SETTINGS,
 } from "@t3tools/contracts";
@@ -31,6 +33,7 @@ import * as ElectronShell from "../electron/ElectronShell.ts";
 import * as ElectronTheme from "../electron/ElectronTheme.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import {
+  EDIT_CONTEXT_MENU_CHANNEL,
   MENU_ACTION_CHANNEL,
   QUIT_SHORTCUT_CHANNEL,
   SNAP_SHOT_EVENT_CHANNEL,
@@ -51,6 +54,7 @@ import { m } from "../i18n/messages.ts";
 import * as DesktopRendererHistory from "../telemetry/DesktopRendererHistory.ts";
 import { makeQuitShortcutHandler } from "./QuitHold.ts";
 import { copyContextMenuImage } from "./ContextMenuImage.ts";
+import * as EditContextMenu from "./EditContextMenu.ts";
 import { installMainWindowRemoteRequestHeaderPolicy } from "./RemoteRequestHeaders.ts";
 
 const TITLEBAR_HEIGHT = 40;
@@ -689,96 +693,139 @@ export const make = Effect.gen(function* () {
         // Right-clicking a guest may leave native editing roles targeting the host renderer.
         contents.focus();
 
-        const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
+        interface EditMenuEntry {
+          readonly label: string;
+          readonly enabled?: boolean;
+          /** Drawn by the app's menu; the native Edit menu roles own the keys. */
+          readonly shortcut?: string;
+          /** The native menu's editing role, which macOS gives its own behavior. */
+          readonly role?: "cut" | "copy" | "paste" | "selectAll";
+          readonly run: () => void;
+        }
+        // Sections; the menus draw a separator between non-empty ones.
+        const sections: EditMenuEntry[][] = [];
+        const live = (run: (contents: Electron.WebContents) => void) => () => {
+          if (!contents.isDestroyed()) run(contents);
+        };
 
         if (isBrowserContents) {
-          menuTemplate.push(
-            {
-              label: m(msg("Reload")),
-              click: () => {
-                if (!contents.isDestroyed()) contents.reload();
-              },
-            },
-            { type: "separator" },
-          );
+          sections.push([{ label: m(msg("Reload")), run: live((c) => c.reload()) }]);
         }
 
         if (params.misspelledWord) {
-          for (const suggestion of params.dictionarySuggestions.slice(0, 5)) {
-            menuTemplate.push({
-              label: suggestion,
-              click: () => {
-                if (!contents.isDestroyed()) contents.replaceMisspelling(suggestion);
-              },
-            });
-          }
-          if (params.dictionarySuggestions.length === 0) {
-            menuTemplate.push({ label: m(msg("No suggestions")), enabled: false });
-          }
-          menuTemplate.push({ type: "separator" });
+          sections.push(
+            params.dictionarySuggestions.length === 0
+              ? [{ label: m(msg("No suggestions")), enabled: false, run: () => {} }]
+              : params.dictionarySuggestions.slice(0, 5).map((suggestion) => ({
+                  label: suggestion,
+                  run: live((c) => c.replaceMisspelling(suggestion)),
+                })),
+          );
         }
 
         if (Option.isSome(ElectronShell.parseSafeExternalUrl(params.linkURL))) {
-          menuTemplate.push(
+          sections.push([
             {
               label: m(msg("Copy Link")),
-              click: () => {
-                void runPromise(electronShell.copyText(params.linkURL));
-              },
+              run: () => void runPromise(electronShell.copyText(params.linkURL)),
             },
-            { type: "separator" },
-          );
+          ]);
         }
 
         const mailtoAddress = parseMailtoAddress(params.linkURL);
         if (Option.isSome(mailtoAddress)) {
-          menuTemplate.push(
+          sections.push([
             {
               label: m(msg("Copy Email Address")),
-              click: () => {
-                void runPromise(electronShell.copyText(mailtoAddress.value));
-              },
+              run: () => void runPromise(electronShell.copyText(mailtoAddress.value)),
             },
-            { type: "separator" },
-          );
+          ]);
         }
 
         if (params.mediaType === "image") {
-          menuTemplate.push({
-            label: m(msg("Copy Image")),
-            click: () => {
-              void runPromise(
-                Effect.tryPromise({
-                  try: () => copyContextMenuImage(contents, params),
-                  catch: (cause) => new ContextMenuImageCopyError({ cause }),
-                }).pipe(Effect.catch(() => logWindowWarning("failed to copy context-menu image"))),
-              );
+          sections.push([
+            {
+              label: m(msg("Copy Image")),
+              run: () =>
+                void runPromise(
+                  Effect.tryPromise({
+                    try: () => copyContextMenuImage(contents, params),
+                    catch: (cause) => new ContextMenuImageCopyError({ cause }),
+                  }).pipe(
+                    Effect.catch(() => logWindowWarning("failed to copy context-menu image")),
+                  ),
+                ),
             },
-          });
-          menuTemplate.push({ type: "separator" });
+          ]);
         }
 
-        menuTemplate.push(
+        sections.push([
           {
-            role: "cut",
             label: m(msg("Cut", { $context: "Edit menu item" })),
             enabled: params.editFlags.canCut,
+            shortcut: "Ctrl+X",
+            role: "cut",
+            run: live((c) => c.cut()),
           },
           {
-            role: "copy",
             label: m(msg("Copy", { $context: "Edit menu item" })),
             enabled: params.editFlags.canCopy,
+            shortcut: "Ctrl+C",
+            role: "copy",
+            run: live((c) => c.copy()),
           },
           {
-            role: "paste",
             label: m(msg("Paste", { $context: "Edit menu item" })),
             enabled: params.editFlags.canPaste,
+            shortcut: "Ctrl+V",
+            role: "paste",
+            run: live((c) => c.paste()),
           },
           {
-            role: "selectAll",
             label: m(msg("Select All", { $context: "Edit menu item" })),
             enabled: params.editFlags.canSelectAll,
+            shortcut: "Ctrl+A",
+            role: "selectAll",
+            run: live((c) => c.selectAll()),
           },
+        ]);
+
+        // Off macOS the app draws its own menus, so the app's renderer draws this one too.
+        // Guests keep the native menu: the host cannot place a menu over their coordinates.
+        if (!isBrowserContents && environment.platform !== "darwin") {
+          const actions = new Map<string, () => void>();
+          const items: ContextMenuItem[] = sections.flatMap((section, sectionIndex) =>
+            section.map((entry, index) => {
+              const id = `${sectionIndex}:${index}`;
+              actions.set(id, entry.run);
+              return {
+                id,
+                label: entry.label,
+                ...(entry.enabled === false ? { disabled: true } : {}),
+                ...(entry.shortcut ? { shortcut: entry.shortcut } : {}),
+                ...(index === 0 && sectionIndex > 0 ? { separatorBefore: true } : {}),
+              };
+            }),
+          );
+          const zoom = contents.getZoomFactor();
+          contents.send(EDIT_CONTEXT_MENU_CHANNEL, {
+            requestId: EditContextMenu.register(contents.id, actions),
+            items,
+            position: { x: params.x / zoom, y: params.y / zoom },
+            source: params.menuSourceType === "keyboard" ? "keyboard" : "mouse",
+          } satisfies DesktopEditContextMenuRequest);
+          return;
+        }
+
+        const menuTemplate = sections.flatMap(
+          (section, index): Electron.MenuItemConstructorOptions[] => [
+            ...(index > 0 ? [{ type: "separator" as const }] : []),
+            ...section.map((entry): Electron.MenuItemConstructorOptions =>
+              entry.role
+                ? { role: entry.role, label: entry.label, enabled: entry.enabled ?? true }
+                : { label: entry.label, enabled: entry.enabled ?? true, click: entry.run },
+            ),
+          ],
         );
 
         void runPromise(

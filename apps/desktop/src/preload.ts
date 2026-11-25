@@ -1,5 +1,6 @@
 import type {
   DesktopBridge,
+  DesktopEditContextMenuRequest,
   DesktopPreviewAnnotationVoiceEvent,
   DesktopPreviewFindResultEvent,
   DesktopPreviewOpenLinkEvent,
@@ -284,6 +285,19 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     ipcRenderer.invoke(IpcChannels.OPEN_SYSTEM_SETTINGS_CHANNEL, pane),
   probeRemoteEditors: () => ipcRenderer.invoke(IpcChannels.PROBE_REMOTE_EDITORS_CHANNEL, undefined),
   pasteAsText: () => ipcRenderer.invoke(IpcChannels.PASTE_AS_TEXT_CHANNEL, undefined),
+  onEditContextMenu: (listener) => {
+    const wrappedListener = (_event: Electron.IpcRendererEvent, request: unknown) => {
+      if (typeof request !== "object" || request === null) return;
+      listener(request as DesktopEditContextMenuRequest);
+    };
+
+    ipcRenderer.on(IpcChannels.EDIT_CONTEXT_MENU_CHANNEL, wrappedListener);
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.EDIT_CONTEXT_MENU_CHANNEL, wrappedListener);
+    };
+  },
+  resolveEditContextMenu: (requestId, itemId) =>
+    ipcRenderer.invoke(IpcChannels.RESOLVE_EDIT_CONTEXT_MENU_CHANNEL, { requestId, itemId }),
   onMenuAction: (listener) => {
     const wrappedListener = (_event: Electron.IpcRendererEvent, action: unknown) => {
       if (typeof action !== "string") return;

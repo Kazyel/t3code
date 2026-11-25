@@ -4,6 +4,7 @@ import type {
   ContextMenuSource,
   LocalApi,
 } from "@t3tools/contracts";
+import { isMacPlatform } from "@t3tools/shared/keybindings";
 import { msg } from "gt-react";
 
 import { isWebUrl } from "./browser/webUrl";
@@ -13,6 +14,11 @@ import { readBrowserClientSettings, writeBrowserClientSettings } from "./clientP
 import { m } from "./i18n/messages";
 
 let cachedApi: LocalApi | undefined;
+
+/** Only macOS menus feel native; elsewhere the desktop app draws its own, like the web build. */
+function usesNativeContextMenus(): boolean {
+  return window.desktopBridge !== undefined && isMacPlatform(navigator.platform);
+}
 
 export function createLocalApi(): LocalApi {
   return {
@@ -54,14 +60,18 @@ export function createLocalApi(): LocalApi {
         position?: { x: number; y: number },
         source?: ContextMenuSource,
       ): Promise<T | null> => {
-        if (window.desktopBridge) {
-          return window.desktopBridge.showContextMenu(items, position, source) as Promise<T | null>;
+        if (usesNativeContextMenus()) {
+          return window.desktopBridge!.showContextMenu(
+            items,
+            position,
+            source,
+          ) as Promise<T | null>;
         }
         return showContextMenuFallback(items, position, source);
       },
       // Unlike native menus, the DOM fallback needs dismissal when underlying state disappears.
       close: async () => {
-        if (!window.desktopBridge) {
+        if (!usesNativeContextMenus()) {
           dismissContextMenu();
         }
       },

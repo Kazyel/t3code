@@ -55,6 +55,7 @@ import {
   openSystemSettings,
   checkSystemPermission,
   pasteAsText,
+  resolveEditContextMenu,
   probeRemoteEditors,
   revealWindow,
   pickFolder,
@@ -175,6 +176,7 @@ export const installDesktopIpcHandlers = Effect.fn("desktop.ipc.installHandlers"
   yield* ipc.handle(appleSpeechPrepare);
   yield* ipc.handle(appleSpeechTranscribe);
   yield* ipc.handle(pasteAsText);
+  yield* ipc.handle(resolveEditContextMenu);
   yield* ipc.handle(revealWindow);
   yield* ipc.handle(syncHtmlFullscreen);
   yield* ipc.handle(setWindowButtonsVisible);

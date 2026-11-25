@@ -95,7 +95,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 }
 
 :root {
-  --app-scrollbar-width: 6px;
+  /* The lane; the thumb inside it is thinner, inset from the edge (::-webkit-scrollbar-thumb). */
+  --app-scrollbar-width: 10px;
   --appearance-contrast-base: 100%;
   --appearance-contrast-boost: 0%;
   --appearance-contrast-border-boost: 0%;
@@ -428,7 +429,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
-
 /* Where the strip's edge cuts a pane, the visible piece gets the pane's
    rounded corners (PaneCuts in SurfaceHost.tsx). Each cut is a chrome corner,
    position: sticky against the strip, so the compositor carries it with the
@@ -644,12 +644,18 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
-
 /* Over the channel art, the pane bar, its corners and the pane cuts keep the
    chrome's flat color instead of repainting the art with a fixed background:
    inside the scrolled layout strip Chromium leaves those fixed backgrounds
    painted at a stale offset after splits and tab switches, so the sky's
-   bright horizon showed squeezed into the tab bar. */
+   bright horizon showed squeezed into the tab bar. The lone pane's bottom
+   corners are the exception: they sit over the art, not the tab bar, and on
+   the inset, outside the strip, a fixed background stays put. */
+[data-chrome-art] [data-slot="sidebar-inset"] > [data-pane-cut$="bottom"]::before {
+  background: var(--chrome-art-paint);
+  background-attachment: fixed;
+  background-blend-mode: var(--chrome-art-blend, normal);
+}
 
 /* PaneNotch lays out the tab with this tail as its end padding. */
 [data-pane-notch] {
@@ -5654,15 +5660,21 @@ body {
 
 :where(:not(iframe))::-webkit-scrollbar-track {
   background: transparent;
+  /* Clear of the pane's rounded corners. */
+  margin-block: 6px;
 }
 
+/* A 4px pill floating off the pane's edge, a little wider under the pointer. */
 :where(:not(iframe))::-webkit-scrollbar-thumb {
-  background: var(--app-scrollbar-thumb);
-  border-radius: 3px;
+  min-height: 32px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--app-scrollbar-thumb) padding-box;
 }
 
 :where(:not(iframe))::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
+  border-width: 2px;
+  background: var(--app-scrollbar-thumb-hover) padding-box;
 }
 
 /* Chat markdown rendering */
@@ -7655,7 +7667,6 @@ body {
       }
     }
   }
-
 
   @media (prefers-reduced-motion: reduce) {
     :root:not(.black-chrome) [data-pane-notch=""] [data-pane-join] * {
