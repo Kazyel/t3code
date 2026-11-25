@@ -401,7 +401,7 @@ function Sidebar({
         <div
           className={cn(
             "relative w-(--sidebar-width) bg-transparent",
-            "[[data-panel-animations=true]_&]:transition-[width] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-out",
+            "[[data-panel-animations=true]_&]:transition-[width] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-panel",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating"
@@ -413,7 +413,7 @@ function Sidebar({
         <div
           className={cn(
             "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) md:flex",
-            "[[data-panel-animations=true]_&]:transition-[left,right,width] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-out",
+            "[[data-panel-animations=true]_&]:transition-[left,right,width] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-panel",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -739,7 +739,7 @@ function SidebarRail({
       className={cn(
         /* A collapsed offcanvas rail overlaps the native scrollbar on Windows and Linux. */
         "-translate-x-1/2 group-data-[side=left]:-right-4 absolute inset-y-0 z-20 hidden w-4 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=right]:left-0 sm:flex [[data-collapsible=offcanvas][data-state=collapsed]_&]:pointer-events-none",
-        "[[data-panel-animations=true]_&]:transition-all [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-out",
+        "[[data-panel-animations=true]_&]:transition-all [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-panel",
         "touch-none",
         canResize
           ? "cursor-col-resize"
@@ -808,7 +808,7 @@ function SidebarInset({
         // and from the sidebar's content, centered on the chrome row at the top.
         // It stretches in the flex wrapper, so the route's own height yields.
         "md:peer-data-[variant=inset]:h-auto md:peer-data-[variant=inset]:overflow-hidden md:peer-data-[variant=inset]:mt-(--workspace-pane-inset-top) md:peer-data-[variant=inset]:me-(--workspace-pane-inset) md:peer-data-[variant=inset]:mb-(--workspace-pane-inset) md:peer-data-[variant=inset]:ms-(--workspace-sidebar-edge-inset) md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-(--workspace-pane-inset)",
-        "[[data-panel-animations=true]_&]:transition-[margin-inline-start,border-end-start-radius] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-out",
+        "[[data-panel-animations=true]_&]:transition-[margin-inline-start,border-end-start-radius] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-panel",
         variant === "pane" && "md:peer-data-[variant=inset]:rounded-pane",
         className,
       )}

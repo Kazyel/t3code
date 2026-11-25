@@ -28,13 +28,15 @@ const spring = (dampingRatio: number, stiffness: number, epsilon: number): Motio
 });
 
 /**
- * The panes and the camera move with the sidebar slide's curve (CSS ease-out) for the Panel
- * animations setting's duration, so everything one change moves arrives together.
+ * The panes and the camera move with the sidebar slide's curve (index.css `--ease-panel`) for the
+ * Panel animations setting's duration, so everything one change moves arrives together.
  */
+export const PANEL_EASE = [0.23, 1, 0.32, 1] as const;
+
 const PANEL_MOTION: MotionConfig = {
   kind: "easing",
   durationMs: 150,
-  curve: { cubicBezier: [0, 0, 0.58, 1] },
+  curve: { cubicBezier: PANEL_EASE },
 };
 
 const MOTION_DEFAULTS: Readonly<Record<MotionName, MotionConfig>> = {

@@ -56,6 +56,7 @@ import { useThreadActionMenu } from "../hooks/useThreadActionMenu";
 import { ProjectFavicon } from "../components/ProjectFavicon";
 import { Button, ContentButton } from "../components/ui/button";
 import { cn } from "../lib/utils";
+import { PANEL_EASE } from "../motion/registry";
 import { requestSideChatComposerFocus } from "../lib/workspaceFocus";
 import { sideThreadComposer, sideThreadKindOf } from "@t3tools/client-runtime/side-thread";
 import { PANE_GHOST_TAB_TITLE_CLASS, PANE_INACTIVE_TAB_TITLE_CLASS } from "../components/PaneNotch";
@@ -160,6 +161,7 @@ const paneStrips = new Map<string, PaneStrip>();
 const stripPlacers = new WeakMap<HTMLElement, (motionMs: number) => void>();
 const stripEntries = new WeakMap<HTMLElement, PaneStrip>();
 const pendingPlacements = new Map<HTMLElement, number>();
+const pendingOverflowMarks = new Set<HTMLElement>();
 const pendingReveals = new WeakSet<HTMLElement>();
 let placementFrame: number | null = null;
 
@@ -170,8 +172,21 @@ let placementFrame: number | null = null;
  */
 function schedulePlacement(strip: HTMLElement, motionMs: number): void {
   pendingPlacements.set(strip, Math.max(motionMs, pendingPlacements.get(strip) ?? 0));
+  requestStripFrame();
+}
+
+/** Mark a strip's overflow in the placement frame, for the same reason. */
+function scheduleOverflowMark(strip: HTMLElement): void {
+  pendingOverflowMarks.add(strip);
+  requestStripFrame();
+}
+
+function requestStripFrame(): void {
   placementFrame ??= requestAnimationFrame(() => {
     placementFrame = null;
+    const marks = [...pendingOverflowMarks];
+    pendingOverflowMarks.clear();
+    for (const strip of marks) if (strip.isConnected) markStripOverflow(strip);
     const placements = [...pendingPlacements];
     pendingPlacements.clear();
     for (const [pending, motion] of placements) stripPlacers.get(pending)?.(motion);
@@ -768,7 +783,8 @@ function moveInto(parent: HTMLElement, node: HTMLElement): void {
   parent.append(node);
 }
 
-const PANE_JOIN_EASING = "ease-out";
+/** Web Animations take no var(); the same curve as index.css `--ease-panel`. */
+const PANE_JOIN_EASING = `cubic-bezier(${PANEL_EASE.join(", ")})`;
 const STRIP_TAB_SELECTOR = "[data-layout-pane-tab], [data-tab-key]";
 
 /** A layout tab by its id, or a panel's own tab (RightPanelTabs) by its surface. */
@@ -807,7 +823,7 @@ function stripBoxOf(strip: HTMLElement, tab: HTMLElement): { x: number; w: numbe
 
 /**
  * Put the joined shape on a tab, sliding there from where it is when motion
- * is on, transform only. The label switches when the shape lands.
+ * is on, transform only. The label switches once the shape is nearly there.
  */
 function moveJoin(
   entry: PaneStrip,
@@ -877,6 +893,13 @@ function moveJoin(
   }
   entry.slide = slide;
   markPaneLit(entry, entry.strip.scrollLeft);
+  // On --ease-panel the shape is nearly there a third of the way in; the label
+  // need not wait out the landing's tail.
+  window.setTimeout(() => {
+    if (entry.slide !== slide) return;
+    entry.joinedId = to.tabId;
+    markJoinedLabel(entry);
+  }, motionMs * 0.3);
   void slide.finished.then(
     () => {
       if (entry.slide === slide) land();
@@ -1076,7 +1099,8 @@ export function LayoutPaneTabStrip({
       scrollTabStripFromRow(event, strip);
     };
     row?.addEventListener("wheel", wheel, { passive: false });
-    markStripOverflow(strip);
+    // Not here: reading the strip inside a tab switch's commit lays the incoming chat out twice.
+    scheduleOverflowMark(strip);
     // The collapsed sidebar's inset moves the strip off the pane's edge
     // without resizing it; the row's content box tracks that inset.
     // oxlint-disable-next-line t3code/no-raw-resize-observer -- Marks DOM attributes and styles only, as the strip's own observer does.

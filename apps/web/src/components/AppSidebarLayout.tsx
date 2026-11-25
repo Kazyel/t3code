@@ -483,7 +483,7 @@ function SidebarControl({ showSidebar }: { readonly showSidebar: boolean }) {
         <div
           className={cn(
             "hidden max-w-[calc(var(--sidebar-width)-var(--workspace-controls-left)-var(--workspace-titlebar-control-size)*3-13px)] shrink-0 grid-cols-[0fr] md:grid",
-            "[[data-panel-animations=true]_&]:transition-[grid-template-columns] [[data-panel-animations=true]_&]:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:ease-out",
+            "[[data-panel-animations=true]_&]:transition-[grid-template-columns] [[data-panel-animations=true]_&]:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:ease-panel",
             isSidebarVisible && "grid-cols-[1fr]",
           )}
           inert={!isSidebarVisible || overviewShown}

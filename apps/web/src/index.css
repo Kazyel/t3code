@@ -571,7 +571,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 [data-pane-cut="start-after-notch"] > span > span,
 [data-pane-cut="end-before-notch"] > span > span {
   opacity: 0;
-  transition: opacity var(--panel-animation-duration, 150ms) ease-out;
+  transition: opacity var(--panel-animation-duration, 150ms) var(--ease-panel);
 }
 
 @container scroll-state(stuck: right) {
@@ -786,6 +786,10 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   /* Motion. drawer is the decelerating curve for surfaces that slide or pop in
      (composer context, pills). */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Panel animations: panes, the strip camera, the sidebar and the active tab's
+     shape. Fast out of the gate, so a switch reads as instant, then a soft
+     landing. motion/registry.ts PANEL_MOTION mirrors it. */
+  --ease-panel: cubic-bezier(0.23, 1, 0.32, 1);
   /* The composer's elevation: a soft drop pulled in under the surface, shared
      by the composer, its context strip and attached banners. */
   --shadow-dialog: var(--dialog-shadow);
@@ -1964,7 +1968,7 @@ html[data-theme-id]:not([data-theme-id=""]):not(.black-chrome) {
 
 [data-panel-animations="true"] > [data-chrome-art-layer="dev"] [data-bp-sidebar],
 [data-panel-animations="true"] > [data-chrome-art-layer="dev"] [data-bp-at="pane-left"] {
-  transition: translate var(--panel-animation-duration) ease-out;
+  transition: translate var(--panel-animation-duration) var(--ease-panel);
 }
 
 /* Over the art the sidebar goes transparent and its secondary text takes the
@@ -6978,7 +6982,7 @@ body {
      pointer off early cancels the 500ms delay for the 150ms fade-out. */
   [data-layout-tab-strip] {
     transition:
-      --strip-fade-start-shown var(--panel-animation-duration, 150ms) ease-out,
+      --strip-fade-start-shown var(--panel-animation-duration, 150ms) var(--ease-panel),
       --strip-chevron-start-shown 0s var(--strip-chevron-start-delay),
       --strip-chevron-end-shown 0s var(--strip-chevron-end-delay);
     --strip-fade-lead: calc(var(--strip-chevron-space) * var(--strip-chevron-start-shown));
@@ -7072,9 +7076,9 @@ body {
     pointer-events: none;
     transition:
       visibility 0s var(--panel-animation-duration, 150ms),
-      box-shadow var(--panel-animation-duration, 150ms) ease-out,
-      opacity var(--panel-animation-duration, 150ms) ease-out,
-      scale var(--panel-animation-duration, 150ms) ease-out;
+      box-shadow var(--panel-animation-duration, 150ms) var(--ease-panel),
+      opacity var(--panel-animation-duration, 150ms) var(--ease-panel),
+      scale var(--panel-animation-duration, 150ms) var(--ease-panel);
   }
 
   [data-strip-scroll-button][data-can-scroll] {
@@ -7084,9 +7088,9 @@ body {
     pointer-events: auto;
     transition:
       visibility 0s 0s,
-      box-shadow var(--panel-animation-duration, 150ms) ease-out,
-      opacity var(--panel-animation-duration, 150ms) ease-out,
-      scale var(--panel-animation-duration, 150ms) ease-out;
+      box-shadow var(--panel-animation-duration, 150ms) var(--ease-panel),
+      opacity var(--panel-animation-duration, 150ms) var(--ease-panel),
+      scale var(--panel-animation-duration, 150ms) var(--ease-panel);
   }
 
   [data-strip-scroll-button][data-can-scroll]:active {
@@ -7104,9 +7108,9 @@ body {
     pointer-events: auto;
     transition:
       visibility 0s 0s,
-      box-shadow var(--panel-animation-duration, 150ms) ease-out,
-      opacity var(--panel-animation-duration, 150ms) ease-out,
-      scale var(--panel-animation-duration, 150ms) ease-out;
+      box-shadow var(--panel-animation-duration, 150ms) var(--ease-panel),
+      opacity var(--panel-animation-duration, 150ms) var(--ease-panel),
+      scale var(--panel-animation-duration, 150ms) var(--ease-panel);
   }
 
   [data-strip-scroll-button][aria-disabled="true"]:hover:not(:active, :focus-visible) {
@@ -7115,7 +7119,7 @@ body {
     transition:
       visibility 0s 500ms,
       min-width 0s 500ms allow-discrete,
-      opacity var(--panel-animation-duration, 150ms) ease-out;
+      opacity var(--panel-animation-duration, 150ms) var(--ease-panel);
   }
 }
 
@@ -7229,7 +7233,7 @@ body {
        pane's corner under it gives way (data-pane-join-start, PaneTabs.tsx). */
     & [data-pane-bar-corner="start"],
     & [data-pane-cut="start-notch"] {
-      transition: opacity var(--panel-animation-duration, 150ms) ease-out;
+      transition: opacity var(--panel-animation-duration, 150ms) var(--ease-panel);
     }
     & [data-pane-join-start] [data-pane-bar-corner="start"],
     & [data-layout-pane-id][data-pane-joined-start] > [data-pane-cut="start-notch"] {
@@ -7577,7 +7581,7 @@ body {
       & [data-jer],
       & [data-jt],
       & [data-jm]::after {
-        transition: opacity var(--panel-animation-duration, 150ms) ease-out;
+        transition: opacity var(--panel-animation-duration, 150ms) var(--ease-panel);
       }
     }
 
@@ -7665,7 +7669,7 @@ body {
       [data-panel-animations="true"]
       [data-slot="sidebar-inset"]
       [data-pane-notch=""] {
-      transition: padding-inline-start var(--panel-animation-duration, 150ms) ease-out;
+      transition: padding-inline-start var(--panel-animation-duration, 150ms) var(--ease-panel);
     }
   }
 }
