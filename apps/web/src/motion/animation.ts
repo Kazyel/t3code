@@ -181,6 +181,12 @@ export interface MotionRun {
   ): MotionRun | null;
 }
 
+/** Repaints the channel art's fixed backgrounds under an element that just stopped moving
+ * (index.css, data-chrome-art-repaint). */
+function repaintFixedChromeArt(element: HTMLElement) {
+  if (element.closest("[data-chrome-art]")) element.toggleAttribute("data-chrome-art-repaint");
+}
+
 /** The element must already hold the final style. Leave no animation fill after completion so
  * nothing repaints at rest; instant motion finishes synchronously. */
 export function playMotion(
@@ -215,6 +221,7 @@ export function playMotion(
     const elapsed = () => stoppedAt ?? Number(animation.currentTime ?? 0);
     animation.onfinish = () => {
       stoppedAt = played.durationMs;
+      repaintFixedChromeArt(element);
       finish?.();
     };
     return {
@@ -226,6 +233,7 @@ export function playMotion(
         stoppedAt = elapsed();
         animation.onfinish = null;
         animation.cancel();
+        repaintFixedChromeArt(element);
       },
       retarget: (next, keyframeOf, nextFinish) => {
         if (stoppedAt !== null) return null;

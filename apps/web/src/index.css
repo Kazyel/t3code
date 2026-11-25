@@ -442,6 +442,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     & [data-pane-notch-corner] {
       background: var(--chrome-art-paint);
       background-attachment: fixed;
+      background-origin: var(--chrome-art-origin, padding-box);
       background-blend-mode: var(--chrome-art-blend, normal);
     }
   }
@@ -662,11 +663,21 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
+/* Chromium paints a fixed background as scrolling while an ancestor is
+   transformed and keeps that paint after the transform ends, so the art
+   shows sized to the surface. playMotion (motion/animation.ts) toggles this
+   attribute on the moved element when it lands; the background-origin flip
+   is invisible on these borderless surfaces but makes them repaint. */
+[data-chrome-art-repaint] {
+  --chrome-art-origin: border-box;
+}
+
 /* Over the channel art the cuts repaint the art, as the notch does. */
 [data-chrome-art] [data-pane-cut]::before,
 [data-chrome-art] [data-pane-cut] > span > span {
   background: var(--chrome-art-paint);
   background-attachment: fixed;
+  background-origin: var(--chrome-art-origin, padding-box);
   background-blend-mode: var(--chrome-art-blend, normal);
 }
 
@@ -2008,6 +2019,7 @@ html[data-theme-id]:not([data-theme-id=""]):not(.black-chrome) {
   [data-chrome-art] [data-overview-zoom] > [data-slot="sidebar-inner"] {
     background: var(--chrome-art-paint);
     background-attachment: fixed;
+    background-origin: var(--chrome-art-origin, padding-box);
     background-blend-mode: var(--chrome-art-blend, normal);
   }
 }
@@ -7679,6 +7691,7 @@ body {
     & [data-pane-bar-corner] {
       background: var(--chrome-art-paint);
       background-attachment: fixed;
+      background-origin: var(--chrome-art-origin, padding-box);
       background-blend-mode: var(--chrome-art-blend, normal);
     }
   }
