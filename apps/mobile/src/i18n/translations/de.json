@@ -388,6 +388,8 @@
   "638678077ba2e050": "{count, plural, one {Versucht, {count} Pull Request zu reviewen} other {Versucht, {count} Pull Requests zu reviewen}}",
   "420bea546d5f8802": "Thread kopiert",
   "2efb2dd3bf170f67": "Thread konnte nicht kopiert werden",
+  "6c03545936b55e0b": "PR-Link kopiert",
+  "1b88f6a5e9fdeea7": "PR-Link konnte nicht kopiert werden",
   "18786351520c79d5": "{shortLabel}-Link kopiert",
   "ff8d722c3ae4d1fa": "{shortLabel}-Link konnte nicht kopiert werden",
   "b063ecd06059857f": "Wird komprimiert, bevor der Cache abläuft…",
@@ -498,6 +500,7 @@
   "bc24c300d53d61c5": "{host} hat auf keiner gespeicherten Route geantwortet.",
   "b0dd3cd876937ca8": "Verbindungsprofil {connectionId} ist nicht verfügbar.",
   "5ce46783e79ca9d1": "Zugangsdaten der Verbindung {connectionId} sind nicht verfügbar.",
+  "b39d1428ec8b23f5": "Unter dieser Adresse läuft jetzt eine andere T3 Code-Installation ({actual}, nicht {expected}). Entferne diese Verbindung und füge sie erneut hinzu.",
   "0bda0cac7f5acc20": "Die verbundene Umgebung {actual} stimmt nicht mit {expected} überein.",
   "ea0d3e4e51d5706f": "Die Zugangsdaten der Umgebung sind ungültig.",
   "7283ebfd16d09677": "Die Zugangsdaten der Umgebung gewähren nicht den erforderlichen Zugriff.",
@@ -792,6 +795,8 @@
   "77231250643f4943": "Dieser {build, select, nightly {Nightly} other {Stable}}-Build kann sich über den Kanal {saved, select, nightly {Nightly} other {Stable}} nicht selbst aktualisieren. Stelle den Update-Kanal wieder auf {build, select, nightly {Nightly} other {Stable}} um oder nutze Review neben Update-Kanal, um den Wechsel zu {saved, select, nightly {Nightly} other {Stable}} erneut zu versuchen.",
   "43ed503038717b90": "Server-Update fehlgeschlagen:",
   "a8cb0a2b46270859": "Die Umgebungsdaten konnten nicht synchronisiert werden.",
+  "4731d4616735186c": "{count, plural, one {{count} Subagent gestartet} other {{count} Subagenten gestartet}}",
+  "885110d4e416d2cd": "{count, plural, one {{count} Subagent ausgeführt} other {{count} Subagenten ausgeführt}}",
   "6b785358f5d62f75": "{count} arbeiten",
   "5af3bd99008c10b8": "{count} fertig",
   "3098c20a7dc58f99": "{count} fehlgeschlagen",
@@ -816,6 +821,7 @@
   "21872f69ccbc711d": "{provider}-MCP-Server werden gestartet",
   "fedaa29ff8815a77": "{provider}-Hooks werden geladen",
   "57025ae4de5beb57": "{provider}-Regeln und -Skills werden geladen",
+  "1cbfbcad9f0d04fe": "{provider}-Sitzung wird fortgesetzt",
   "4729a188600f1501": "Verbindung zu {provider} wird hergestellt",
   "8c8977097681630f": "{provider} wird gestartet",
   "f1d27d127ab27ac6": "Wird gestartet",
@@ -1917,6 +1923,7 @@
   "69c659d8b6e271cc": "Die Seite fordert eine Datei an.",
   "a6efeb99b479990a": "Dateien auswählen",
   "59c87648d44b958c": "Datei auswählen",
+  "6f321f153b8711bb": "Option auswählen",
   "61a552a67e9e3eac": "Antwort auf Dialog",
   "1d9bd868fafea18a": "Ablehnen",
   "1d0a7acef4a95536": "Akzeptieren",
@@ -3797,6 +3804,68 @@
   "ed83b25c71c98a20": "Wähle für jedes Projekt ein oder mehrere {scope}s in {tracker}. Ihre Issues erscheinen neben denen des Repositorys, und Agenten legen neue Issues im ersten an, sofern kein anderes verlangt wird.",
   "99d51127f573296b": "Weiteres Konto",
   "8ec2c57414669b79": "Verbinde einen zweiten {tracker}-Workspace oder -Nutzer.",
+  "892f08d21b8e48a9": "{layers} per {kind, select, squash {Squash} merge {Merge} rebase {Rebase} fastForward {Fast-Forward} other {{method}}} in {base} mergen, sobald die Anforderungen erfüllt sind. Das kann sofort passieren.",
+  "89bf40eb2503b6c5": "Neues Gerät bei {environment} angemeldet",
+  "c94b5fe9ef372bc0": "{device} hat sich über {product} verbunden. Warst du das nicht, entferne es in T3 Code auf diesem Computer unter Einstellungen → Zugriff.",
+  "bec67d0ed485f885": "{count, plural, one {{count} Gerät hat} other {{count} Geräte haben}} sich über {product} verbunden. Warst du das nicht, entferne sie in T3 Code auf diesem Computer unter Einstellungen → Zugriff.",
+  "18c30aa94d0a807f": "Verbindungsdiagnose",
+  "eb287395a09cd288": "Verbindungs-Traces senden",
+  "6787f93bbf6ce0b6": "Hilft dem T3 Code-Team, Verbindungsprobleme zu beheben. Traces enthalten Zeiten, Fehlertypen, eine ID für diese App-Sitzung und die App-Version, nie deine Threads, Prompts oder deinen Code. Du kannst das unter Einstellungen > Über T3 Code > Diagnose ändern.",
+  "0b1e4aecbd38e0cf": "Wenn die App über {product} eine Verbindung zu einem Computer herstellt, sendet sie dem T3 Code-Team, wie lange jeder Schritt gedauert hat, den Fehlertyp, eine ID für diese App-Sitzung und die App-Version. Traces enthalten nie deine Threads, Prompts oder deinen Code.",
+  "e0856d6a402ad821": "Die Richtlinie von {organization} erlaubt keine Worktree-Layout-Befehle von Projekten.",
+  "7150557773b3818b": "In der Warteschlange",
+  "efbeb3993ee2c3f5": "Wartet auf {pool}",
+  "0398ca6c1d24b92d": "wartet, als Nächstes dran",
+  "0af6d5ffd5166214": "{count, plural, one {wartet, {count} davor} other {wartet, {count} davor}}",
+  "e114d37b32ab0dc7": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " braucht eine Begründung."
+  ],
+  "7e1fd2eb570a372b": "{who} hat {choice} geantwortet",
+  "a3c43735e1a81498": "Begründung für {title}",
+  "bfad234f016cfa3f": "Warum, in einem Satz. Gilt für die Antwort, die du wählst.",
+  "3759768c5d342c22": [
+    "beantwortet",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "8afa4fbe16f95bcf": [
+    "von ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ",",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "0f93532dd76391fc": "Du hast {choice} geantwortet",
+  "235902a19e95833b": [
+    "von dir,",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "1a1beecff68a6e61": "Google-Konto bestätigen",
+  "99451a5d2d40440f": "Zurückgezogen von {by}.",
+  "3ee30a50b70fffab": "Zurückgezogen von {by}: {reason}",
+  "201490988858b511": "zurückgezogen von {by}",
   "ce2136b36f87b655": "Verbinde diese Umgebung, um ihre Einstellungen zu ändern.",
   "a90a441fd0e08de7": "Diese Umgebung",
   "32fb83554cfd85b4": "Transkriptionsmodelle",
@@ -4170,6 +4239,7 @@
   "75d18dac06f4f037": "Skills",
   "d384fcf737bd3c54": "Erwähnungen",
   "caabad88e067f9ef": "Dateien werden gesucht…",
+  "26ffce7329da1fcc": "Keine passenden Pull Requests.",
   "cc3a99fa77770432": "Keine passenden Pull Requests oder Threads.",
   "4532ebb7ce1d3257": "Keine passenden Erwähnungen.",
   "1c2f899f6eb7aa4b": "Keine Skills gefunden.",
@@ -4341,6 +4411,21 @@
       "v": "v"
     },
     " hat ihre Seite verlassen und wurde gestoppt"
+  ],
+  "796b81c4875c4feb": [
+    "Die App ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " benötigt einen neueren ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    "-Server in dieser Umgebung. Aktualisiere den Server, um sie zu nutzen."
   ],
   "5ef18e4d39b398bf": [
     "Die App ",
@@ -4910,6 +4995,7 @@
   "306a6f95ad9d52f7": "Nicht gesendet",
   "11276ab6c58b7a25": "Öffnet den Entwurf im Eingabefeld für neue Aufgaben. Nach links wischen zum Verwerfen.",
   "99950f3a28d425fa": "Wird gesendet, sobald die Umgebung wieder verbunden ist. Öffnet die Aufgabe zum Bearbeiten. Nach links wischen zum Löschen.",
+  "d71048f4fb9cf44a": "Wartet auf Synchronisierung",
   "02c0ae493e689f90": "Ziel",
   "0a260c7744afd0be": "Wartet",
   "be451f475c514b37": "Aufgeweckt-Hinweis schließen",
@@ -5339,6 +5425,9 @@
   "744127f8dfad7d22": "Verbinde eine Umgebung, um ihre Workflow-Ausführungen zu sehen.",
   "b9aae2f7cdb1a379": "Noch keine Workflow-Ausführungen",
   "ace8fc1c643cf9f6": "Ein Workflow verbindet Agenten, Code, Zeitpläne und Fragen an dich zu einer Ausführung, die Neustarts übersteht. Schreib einen auf deinem Computer, unter Workflows, dann Definitionen.",
+  "fc9c3a00cfc18b55": "Alle Arten",
+  "e4d1316c85ed7066": "Keine Fragen dieser Art warten auf dich.",
+  "45a94c724845ec1d": "Sonstige",
   "fceb81aa6685fb47": "Chats",
   "86798f07ba2d7f4d": "Issues durchsuchen",
   "484cd83bb303bab8": "Pull Requests durchsuchen",

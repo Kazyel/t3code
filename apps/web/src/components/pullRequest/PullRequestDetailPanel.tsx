@@ -5,7 +5,11 @@ import {
   resolvePullRequestReviewAnchor,
   type PullRequestAnchor,
 } from "@t3tools/shared/pullRequestAnchor";
-import { usePullRequestDetail, pullRequestRefKey } from "./usePullRequestDetail";
+import {
+  internPullRequestReference,
+  pullRequestRefKey,
+  usePullRequestDetail,
+} from "./usePullRequestDetail";
 import { PullRequestDetailCrumbs } from "./PullRequestDetailCrumbs";
 import { PullRequestTitleEditor } from "./PullRequestTitleEditor";
 import { PullRequestBaseBranch } from "./PullRequestBaseBranch";
@@ -55,6 +59,7 @@ import {
   type LucideIcon,
   PanelRightIcon,
   TextIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import {
   lazy,
@@ -102,6 +107,8 @@ import { PullRequestThreadLinks } from "./PullRequestThreadLinks";
 import { vcsEnvironment } from "~/state/vcs";
 import { RelativeTime } from "~/components/RelativeTime";
 import { useUiStateStore } from "~/uiStateStore";
+
+import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
 import { toastManager } from "../ui/toast";
@@ -109,6 +116,8 @@ import { Tooltip, TooltipPopup, TooltipProvider, TooltipTrigger } from "../ui/to
 import { PullRequestPrivateBadge } from "./PullRequestDetailLayout";
 import { PullRequestDetailGhost, PullRequestTimelineGhost } from "./PullRequestGhosts";
 import { PullRequestCopyableCode } from "./PullRequestCopyableCode";
+import { useStableCallback } from "~/hooks/useStableCallback";
+import { SharedTooltipProvider } from "../ui/shared-tooltip";
 import { PullRequestActivityUnavailableState } from "./PullRequestActivityUnavailableState";
 import { SourceControlAppAccessNotice } from "../SourceControlAppAccessNotice";
 import { DiffPanelLoadingState } from "../DiffPanelShell";
@@ -141,6 +150,8 @@ import {
   pullRequestHandoffLabels,
   PULL_REQUEST_MERGE_METHOD_LABELS,
   checkoutFailureDescription,
+  mergeHeadPin,
+  seenPullRequestHead,
   readableFailure,
   resolvePullRequestReferenceHost,
   resolvePullRequestPrimaryControl,
@@ -291,15 +302,21 @@ function resolvePullRequestReference(
       };
 }
 
+// Takes the fields, not the detail: the detail is rebuilt whenever any of its queries changes
+// state, and a new context value re-renders every markdown block in the panel.
 function pullRequestMarkdownContext(
-  detail: Pick<PullRequestDetail, "provider" | "url" | "repository"> | null,
+  provider: string | null,
+  url: string | null,
+  repository: string | null,
   threadRef: ScopedThreadRef | null,
 ) {
   return {
-    extensions: pullRequestMarkdownExtensions(detail),
-    lineBreaks: sourceControlClients.find(detail?.provider ?? "")?.hardLineBreaks ?? false,
+    extensions: pullRequestMarkdownExtensions(
+      provider === null || url === null ? null : { provider, url },
+    ),
+    lineBreaks: sourceControlClients.find(provider ?? "")?.hardLineBreaks ?? false,
     threadRef,
-    repository: detail?.repository ?? null,
+    repository,
   };
 }
 
@@ -331,6 +348,10 @@ function linkedTab(anchor: PullRequestAnchor | null): PullRequestDetailTab | nul
       return null;
   }
 }
+
+// The Summary restores its scroll on remount; a header left expanded would condense over the
+// restored position and its scroll compensation would move the view.
+const summaryCondensedByScopeKey = new Map<string, boolean>();
 
 export function PullRequestDetailPanel({
   environmentId,
@@ -393,10 +414,8 @@ export function PullRequestDetailPanel({
   );
   const repositoryIdentity = project?.repositoryIdentity;
   const supportsThreadPullRequests = environmentConfigs.get(environmentId) !== undefined;
-  const reference = resolvePullRequestReference(
-    requestedReference,
-    repositoryIdentity,
-    supportsThreadPullRequests,
+  const reference = internPullRequestReference(
+    resolvePullRequestReference(requestedReference, repositoryIdentity, supportsThreadPullRequests),
   );
   const loadingCheckoutCommand = loadingPullRequestCheckoutCommand(reference, repositoryIdentity);
   const unavailableHostUrl = projectChangeRequestUrl(
@@ -439,6 +458,7 @@ export function PullRequestDetailPanel({
     sharedSummary,
     coreDetail,
     detail,
+    observedAt,
   } = usePullRequestDetail(environmentId, reference, matchingListEntry);
   const revealAnchor = parsePullRequestAnchor(revealUrl);
   const [selectedTab, setTab] = useState<PullRequestDetailTab>(
@@ -551,7 +571,7 @@ export function PullRequestDetailPanel({
   };
   const [condensedByTab, setCondensedByTab] = useState<
     Partial<Record<PullRequestDetailTab, boolean>>
-  >({});
+  >(() => ({ summary: summaryCondensedByScopeKey.get(tabScopeKey) ?? false }));
   const condensed = condensedByTab[tab] ?? false;
   const [scrolledByTab, setScrolledByTab] = useState<
     Partial<Record<PullRequestDetailTab, boolean>>
@@ -680,7 +700,12 @@ export function PullRequestDetailPanel({
       : (sourceControlClients.parseChangeRequestUrl(detail.url)?.link.repositoryUrl ?? null);
   const hostClient = sourceControlClients.get(detail?.provider);
   const openOnHostText = openOnHostLabel(hostClient, resolve);
-  const markdownContext = pullRequestMarkdownContext(detail, threadRef);
+  const markdownContext = pullRequestMarkdownContext(
+    detail?.provider ?? null,
+    detail?.url ?? null,
+    detail?.repository ?? null,
+    threadRef,
+  );
   const authorProfileUrl =
     detail?.author && repositoryUrl !== null
       ? hostClient.authorProfileUrl(detail.author.login, repositoryUrl)
@@ -723,6 +748,7 @@ export function PullRequestDetailPanel({
     stackError: nativeStackQuery.error,
   });
   const stackOwnsMerge = supportsStackActions && nativeStack !== null;
+  const stackAutoMerge = supportsStackActions && detail?.capabilities.stackAutoMerge === true;
   const mergeBlockedReason = canMergeSinglePullRequest
     ? null
     : nativeStackQuery.error
@@ -730,12 +756,31 @@ export function PullRequestDetailPanel({
       : gt("Checking stack membership…");
   const activityPending = activityQuery.isPending && activity === null;
   const activityError = activity === null ? activityQuery.error : null;
+  // Reads only the refresh functions: the query views are new whenever a read starts or settles,
+  // and this goes to every comment's reaction bar and resolve button.
+  const { refresh: refreshDetailQuery } = detailQuery;
+  const { refresh: refreshActivityQuery } = activityQuery;
+  const { refresh: refreshNativeStack } = nativeStackQuery;
   const refreshDetail = () => {
-    detailQuery.refresh();
-    activityQuery.refresh();
-    nativeStackQuery.refresh();
+    refreshDetailQuery();
+    refreshActivityQuery();
+    refreshNativeStack();
   };
   const [refreshToken, setRefreshToken] = useState(0);
+  const seenHeadKey = `${environmentId}:${pullRequestKey}`;
+  const [storedSeenHead, setSeenHead] = useState<ReturnType<typeof seenPullRequestHead> | null>(
+    null,
+  );
+  // A stored answer paints first, so only a settled read counts as shown.
+  const seenHead = seenPullRequestHead(
+    storedSeenHead,
+    seenHeadKey,
+    detailQuery.isPending ? undefined : detail?.headSha,
+  );
+  if (seenHead !== storedSeenHead) setSeenHead(seenHead);
+  const shownHeadSha = seenHead.sha ?? detail?.headSha;
+  const unseenHeadSha =
+    detail?.state === "open" && detail.headSha !== shownHeadSha ? detail.headSha : undefined;
   const [activityRevision, setActivityRevision] = useState<{
     readonly key: string;
     readonly updatedAt: string;
@@ -897,6 +942,7 @@ export function PullRequestDetailPanel({
       input: {
         ...reference,
         action,
+        ...mergeHeadPin(action, shownHeadSha),
         ...(method ? { mergeMethod: method } : {}),
         ...(updateMethod ? { updateMethod } : {}),
       },
@@ -914,6 +960,8 @@ export function PullRequestDetailPanel({
         title: actionFailureLabels(changeRequestTermKind(terminology))[action],
         description: readableFailure(failure, hint),
       });
+      // A refused merge usually means new commits, so show what the host has now.
+      if (action === "merge" || action === "enable-auto-merge") refreshDetail();
       onActed?.(action, "failed");
       return false;
     }
@@ -1546,6 +1594,7 @@ export function PullRequestDetailPanel({
           onRetry: nativeStackQuery.error ? nativeStackQuery.refresh : undefined,
           reference,
           environmentId,
+          shownHeadSha,
           onSelect: onSelectPullRequest,
           mergeMethod: selectedMergeMethod,
           stale: !nativeStackQuery.isFresh,
@@ -1555,6 +1604,11 @@ export function PullRequestDetailPanel({
               ? detail.baseBranch
               : null,
           canRebase: supportsStackActions && detail.viewerPermissions.stackRebase === true,
+          canAutoMerge:
+            stackAutoMerge && can("enable-auto-merge") && allowedMergeMethods.length > 0,
+          preferAutoMerge: checksState !== null && checksState !== "passing",
+          autoMergeArmed: stackAutoMerge && autoMergeArmed,
+          canCancelAutoMerge: stackAutoMerge && can("disable-auto-merge"),
           onActed: () => {
             refreshDetail();
             onActed?.();
@@ -1585,7 +1639,11 @@ export function PullRequestDetailPanel({
     />
   ) : null;
   const stackMergeButton =
-    stackMenuProps !== null && stackMenuProps.canMerge && stackMenuProps.conflictsWith === null ? (
+    stackMenuProps !== null &&
+    (stackMenuProps.canMerge ||
+      (stackMenuProps.canAutoMerge && stackMenuProps.preferAutoMerge)) &&
+    !stackMenuProps.autoMergeArmed &&
+    stackMenuProps.conflictsWith === null ? (
       <PullRequestStackMenu {...stackMenuProps} display="merge-button" />
     ) : null;
   const showsArmedNote = autoMergeArmed && primaryAction !== "auto-merge-armed";
@@ -1757,6 +1815,12 @@ export function PullRequestDetailPanel({
     </span>
   ) : null;
 
+  // The summary renders every comment; these change with every query state, and a new handler
+  // would re-render that whole tree. They are only called from events.
+  const settleRevealStable = useStableCallback(settleReveal);
+  const startFixFindingStable = useStableCallback(startFixFinding);
+  const addCommentToChatStable = useStableCallback(addCommentToChat);
+
   if (detailQuery.isPending && !detail) {
     return (
       <PullRequestDetailGhost
@@ -1773,544 +1837,579 @@ export function PullRequestDetailPanel({
   }
 
   return (
-    <div
-      className="relative flex h-[calc(100%+var(--surface-top-inset,0px))] min-h-0 w-full flex-col bg-(--code-surface) pt-under-header"
-      data-surface-reaches-under-header=""
-    >
-      {threadPickerOpen && detail ? (
-        <PullRequestThreadLinks
-          key={`${environmentId}:${detail.url}`}
-          display="picker"
-          environmentId={environmentId}
-          reference={reference}
-          url={detail.url}
-          threadRef={null}
-          onPickerOpenChange={setThreadPickerOpen}
-        />
-      ) : null}
+    // One tooltip for the panel's many triggers; mounting one per trigger dominated opening it.
+    <SharedTooltipProvider>
       <div
-        className={cn(
-          "@container/pr-header grid min-w-0 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2",
-          !detail && !onClose && "hidden",
-        )}
+        className="relative flex h-[calc(100%+var(--surface-top-inset,0px))] min-h-0 w-full flex-col bg-(--code-surface) pt-under-header"
+        data-surface-reaches-under-header=""
       >
-        <PullRequestDetailCrumbs
-          detail={detail}
-          threadRef={threadRef}
-          toneClassName={statePresentation?.toneClassName ?? null}
-          repositoryUrl={repositoryUrl}
-          openOnHostText={openOnHostText}
-          onBack={onBack}
-        >
-          {detail ? (
-            <>
-              {detail.visibility === "private" ? <PullRequestPrivateBadge /> : null}
-              {stackMenuProps !== null ? (
-                <span className="inline-flex shrink-0 @max-2xs/pr-header:hidden">
-                  <PullRequestStackMenu {...stackMenuProps} display="trigger" />
-                </span>
-              ) : supportsStackActions && nativeStackQuery.error ? (
-                <Button variant="ghost" size="micro" onClick={nativeStackQuery.refresh}>
-                  <T>Retry stack lookup</T>
-                </Button>
-              ) : null}
-              <span className="ml-auto inline-flex shrink-0 items-baseline gap-1.5 text-caption text-muted-foreground @max-[30rem]/pr-header:hidden">
-                <span
-                  className="inline-flex items-baseline gap-1 tabular-nums @max-[34rem]/pr-header:hidden"
-                  aria-label={gt(
-                    "{count, plural, one {{formattedCount} changed file} other {{formattedCount} changed files}}",
-                    {
-                      count: detail.changedFiles,
-                      formattedCount: detail.changedFiles.toLocaleString(),
-                    },
-                  )}
-                >
-                  <FileDiffIcon aria-hidden className="size-3 self-center" />
-                  {detail.changedFiles.toLocaleString()}
-                </span>
-                <PullRequestChangeBreakdownStat
-                  environmentId={environmentId}
-                  reference={reference}
-                  additions={detail.additions}
-                  deletions={detail.deletions}
-                  className="shrink-0 font-mono text-caption"
-                  eager
-                />
-              </span>
-            </>
-          ) : null}
-        </PullRequestDetailCrumbs>
-        <div className="mt-2 mr-3 flex h-6 shrink-0 select-none items-center justify-end gap-1">
-          {detail && context === "page" ? (
-            <TooltipProvider delay={150} closeDelay={150} timeout={400}>
-              <PullRequestThreadLinks
-                display="count"
-                environmentId={environmentId}
-                reference={reference}
-                url={detail.url}
-                threadRef={null}
-              />
-            </TooltipProvider>
-          ) : null}
-          {detail ? (
-            <TooltipProvider delay={150} closeDelay={150} timeout={400}>
-              <PullRequestActionsMenu
-                environmentId={environmentId}
-                reference={reference}
-                pullRequestKey={pullRequestKey}
-                detail={detail}
-                terminology={terminology}
-                threadRef={threadRef}
-                linkThreadRef={
-                  threadRef ??
-                  (typeof composerDraftTarget === "object" ? composerDraftTarget : null)
-                }
-                onOpenAsWorkspace={
-                  threadRef !== null && context !== "page" && scrollingWorkspaces
-                    ? () => openPullRequestWorkspace(threadRef, reference.number)
-                    : undefined
-                }
-                onThreadPickerOpenChange={setThreadPickerOpen}
-                refreshing={refreshing}
-                refreshFromHost={refreshFromHost}
-                timelineOrder={tab === "timeline" ? timelineOrder : null}
-                onToggleTimelineOrder={() =>
-                  setTimelineOrder((order) => (order === "newest" ? "oldest" : "newest"))
-                }
-                handoff={handoff}
-                attachesToComposer={attachTarget !== null}
-                askAboutPullRequest={askAboutPullRequest}
-                explainPullRequest={explainPullRequest}
-                canFixFindings={canFixFindings}
-                startFixFindings={startFixFindings}
-                handoffLabels={handoffLabels}
-                canWriteGuide={reviewGuidesEnabled && guideWriter.canWrite}
-                guideRunning={guideWriter.running}
-                guideWritten={guideWriter.data?.guide != null}
-                writeGuide={writeGuide}
-                pickableEnvironments={pickableEnvironments}
-                actingEnvironmentId={actingEnvironmentId}
-                onActingEnvironmentChange={(next) =>
-                  setActingScope({ pullRequestKey, environmentId: next })
-                }
-                can={can}
-                autoMergeArmed={autoMergeArmed}
-                showsDraftToggle={showsDraftToggle}
-                showsMergeNow={showsMergeNow}
-                showsAutoMerge={showsAutoMerge}
-                showsMergeMethods={showsMergeMethods}
-                allowedMergeMethods={allowedMergeMethods}
-                selectedMergeMethod={selectedMergeMethod}
-                onSelectMergeMethod={(method) => {
-                  setMergeMethod(method);
-                  setLastSelectedMergeMethod(method);
-                }}
-                showsDeleteBranch={showsDeleteBranch}
-                environmentConnected={environmentConnected}
-                canWriteSourceControl={canWriteSourceControl}
-                onMaintainerEditsSaved={refreshDetail}
-                confirmDeleteBranch={confirmDeleteBranch}
-                pendingAction={pendingAction}
-                perform={perform}
-                openOnHostText={openOnHostText}
-                copyReference={copyReference}
-                inlineConfirm={inlineConfirm}
-                showCheckout={context === "page"}
-                checkoutMenuItems={checkoutMenuItems}
-                onEditTitle={() => {
-                  scrollerByTab.current[tab]?.scrollTo({ top: 0 });
-                  setCondensedByTab((previous) => ({ ...previous, [tab]: false }));
-                  setTitleScope({ pullRequestKey, text: detail.title });
-                }}
-                repositoryUrl={repositoryUrl}
-                checkoutCommand={checkoutCommand}
-              />
-            </TooltipProvider>
-          ) : null}
-          {onClose ? (
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              aria-label={gt(
-                "Collapse {term, select, mr {merge request} cr {change request} other {pull request}} panel",
-                { term: changeRequestTermKind(terminology) },
-              )}
-              onClick={onClose}
-            >
-              <PanelRightIcon className="size-3.5" />
-            </Button>
-          ) : null}
-        </div>
-
+        {threadPickerOpen && detail ? (
+          <PullRequestThreadLinks
+            key={`${environmentId}:${detail.url}`}
+            display="picker"
+            environmentId={environmentId}
+            reference={reference}
+            url={detail.url}
+            threadRef={null}
+            onPickerOpenChange={setThreadPickerOpen}
+          />
+        ) : null}
         <div
           className={cn(
-            "col-span-2 grid",
-            condensed
-              ? "grid-rows-[1fr]"
-              : "grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+            "@container/pr-header grid min-w-0 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2",
+            !detail && !onClose && "hidden",
           )}
         >
-          <div
-            ref={condensedRowRef}
-            className={cn(
-              "min-h-0 overflow-hidden transition-[opacity,transform] duration-150 ease-out motion-reduce:transform-none motion-reduce:transition-none",
-              condensed
-                ? "translate-y-0 opacity-100 delay-50"
-                : "translate-y-1 opacity-0 duration-100",
-            )}
-            inert={!condensed}
-            data-workspace-scroll-swap
+          <PullRequestDetailCrumbs
+            detail={detail}
+            threadRef={threadRef}
+            toneClassName={statePresentation?.toneClassName ?? null}
+            repositoryUrl={repositoryUrl}
+            openOnHostText={openOnHostText}
+            onBack={onBack}
           >
             {detail ? (
-              <div className="flex min-w-0 items-center gap-2 px-4 pt-1 pb-1 text-meta text-muted-foreground">
-                <PullRequestActorLabel
-                  actor={detail.author}
-                  profileUrl={authorProfileUrl}
-                  variant="avatar"
-                  className="shrink-0"
-                />
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                        {detail.title}
-                      </span>
-                    }
+              <>
+                {detail.visibility === "private" ? <PullRequestPrivateBadge /> : null}
+                {stackMenuProps !== null ? (
+                  <span className="inline-flex shrink-0 @max-2xs/pr-header:hidden">
+                    <PullRequestStackMenu {...stackMenuProps} display="trigger" />
+                  </span>
+                ) : supportsStackActions && nativeStackQuery.error ? (
+                  <Button variant="ghost" size="micro" onClick={nativeStackQuery.refresh}>
+                    <T>Retry stack lookup</T>
+                  </Button>
+                ) : null}
+                <span className="ml-auto inline-flex shrink-0 items-baseline gap-1.5 text-caption text-muted-foreground @max-[30rem]/pr-header:hidden">
+                  <span
+                    className="inline-flex items-baseline gap-1 tabular-nums @max-[34rem]/pr-header:hidden"
+                    aria-label={gt(
+                      "{count, plural, one {{formattedCount} changed file} other {{formattedCount} changed files}}",
+                      {
+                        count: detail.changedFiles,
+                        formattedCount: detail.changedFiles.toLocaleString(),
+                      },
+                    )}
+                  >
+                    <FileDiffIcon aria-hidden className="size-3 self-center" />
+                    {detail.changedFiles.toLocaleString()}
+                  </span>
+                  <PullRequestChangeBreakdownStat
+                    environmentId={environmentId}
+                    reference={reference}
+                    additions={detail.additions}
+                    deletions={detail.deletions}
+                    className="shrink-0 font-mono text-caption"
+                    eager
                   />
-                  <TooltipPopup side="top">{detail.title}</TooltipPopup>
-                </Tooltip>
-                <span className="shrink-0">
-                  <RelativeTime timestamp={detail.updatedAt} />
                 </span>
-                <span className="hidden min-w-0 flex-1 @2xl/pr-header:flex">{headerBranches}</span>
-              </div>
+              </>
+            ) : null}
+          </PullRequestDetailCrumbs>
+          <div className="mt-2 mr-3 flex h-6 shrink-0 select-none items-center justify-end gap-1">
+            {detail && context === "page" ? (
+              <TooltipProvider delay={150} closeDelay={150} timeout={400}>
+                <PullRequestThreadLinks
+                  display="count"
+                  environmentId={environmentId}
+                  reference={reference}
+                  url={detail.url}
+                  threadRef={null}
+                />
+              </TooltipProvider>
+            ) : null}
+            {detail ? (
+              <TooltipProvider delay={150} closeDelay={150} timeout={400}>
+                <PullRequestActionsMenu
+                  environmentId={environmentId}
+                  reference={reference}
+                  pullRequestKey={pullRequestKey}
+                  detail={detail}
+                  observedAt={observedAt}
+                  terminology={terminology}
+                  threadRef={threadRef}
+                  linkThreadRef={
+                    threadRef ??
+                    (typeof composerDraftTarget === "object" ? composerDraftTarget : null)
+                  }
+                  onOpenAsWorkspace={
+                    threadRef !== null && context !== "page" && scrollingWorkspaces
+                      ? () => openPullRequestWorkspace(threadRef, reference.number)
+                      : undefined
+                  }
+                  onThreadPickerOpenChange={setThreadPickerOpen}
+                  refreshing={refreshing}
+                  refreshFromHost={refreshFromHost}
+                  timelineOrder={tab === "timeline" ? timelineOrder : null}
+                  onToggleTimelineOrder={() =>
+                    setTimelineOrder((order) => (order === "newest" ? "oldest" : "newest"))
+                  }
+                  handoff={handoff}
+                  attachesToComposer={attachTarget !== null}
+                  askAboutPullRequest={askAboutPullRequest}
+                  explainPullRequest={explainPullRequest}
+                  canFixFindings={canFixFindings}
+                  startFixFindings={startFixFindings}
+                  handoffLabels={handoffLabels}
+                  canWriteGuide={reviewGuidesEnabled && guideWriter.canWrite}
+                  guideRunning={guideWriter.running}
+                  guideWritten={guideWriter.data?.guide != null}
+                  writeGuide={writeGuide}
+                  pickableEnvironments={pickableEnvironments}
+                  actingEnvironmentId={actingEnvironmentId}
+                  onActingEnvironmentChange={(next) =>
+                    setActingScope({ pullRequestKey, environmentId: next })
+                  }
+                  can={can}
+                  autoMergeArmed={autoMergeArmed}
+                  showsDraftToggle={showsDraftToggle}
+                  showsMergeNow={showsMergeNow}
+                  showsAutoMerge={showsAutoMerge}
+                  showsMergeMethods={showsMergeMethods}
+                  allowedMergeMethods={allowedMergeMethods}
+                  selectedMergeMethod={selectedMergeMethod}
+                  onSelectMergeMethod={(method) => {
+                    setMergeMethod(method);
+                    setLastSelectedMergeMethod(method);
+                  }}
+                  showsDeleteBranch={showsDeleteBranch}
+                  environmentConnected={environmentConnected}
+                  canWriteSourceControl={canWriteSourceControl}
+                  onMaintainerEditsSaved={refreshDetail}
+                  confirmDeleteBranch={confirmDeleteBranch}
+                  pendingAction={pendingAction}
+                  perform={perform}
+                  openOnHostText={openOnHostText}
+                  copyReference={copyReference}
+                  inlineConfirm={inlineConfirm}
+                  showCheckout={context === "page"}
+                  checkoutMenuItems={checkoutMenuItems}
+                  onEditTitle={() => {
+                    scrollerByTab.current[tab]?.scrollTo({ top: 0 });
+                    setCondensedByTab((previous) => ({ ...previous, [tab]: false }));
+                    setTitleScope({ pullRequestKey, text: detail.title });
+                  }}
+                  repositoryUrl={repositoryUrl}
+                  checkoutCommand={checkoutCommand}
+                />
+              </TooltipProvider>
+            ) : null}
+            {onClose ? (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={gt(
+                  "Collapse {term, select, mr {merge request} cr {change request} other {pull request}} panel",
+                  { term: changeRequestTermKind(terminology) },
+                )}
+                onClick={onClose}
+              >
+                <PanelRightIcon className="size-3.5" />
+              </Button>
             ) : null}
           </div>
-        </div>
 
-        <div
-          className={cn(
-            "col-span-2 grid",
-            condensed
-              ? "grid-rows-[0fr]"
-              : "grid-rows-[1fr] transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
-          )}
-        >
           <div
-            ref={foldRef}
             className={cn(
-              "min-h-0 overflow-hidden transition-[opacity,transform] duration-150 ease-out motion-reduce:transform-none motion-reduce:transition-none",
+              "col-span-2 grid",
               condensed
-                ? "-translate-y-1 opacity-0 duration-100"
-                : "translate-y-0 opacity-100 delay-50",
+                ? "grid-rows-[1fr]"
+                : "grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
             )}
-            inert={condensed}
-            data-workspace-scroll-swap
           >
-            {detail ? (
-              <div className="col-span-2 flex min-w-0 flex-col gap-1.5 px-4 pt-1.5 pb-2.5">
-                <PullRequestTitleEditor
-                  environmentId={environmentId}
-                  reference={reference}
-                  detail={detail}
-                  canWriteSourceControl={canWriteSourceControl}
-                  value={titleDraft}
-                  onValueChange={(text) =>
-                    setTitleScope(text === null ? null : { pullRequestKey, text })
-                  }
-                />
-                <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-meta text-muted-foreground">
-                  <PullRequestActorLabel actor={detail.author} profileUrl={authorProfileUrl} />
+            <div
+              ref={condensedRowRef}
+              className={cn(
+                "min-h-0 overflow-hidden transition-[opacity,transform] duration-150 ease-out motion-reduce:transform-none motion-reduce:transition-none",
+                condensed
+                  ? "translate-y-0 opacity-100 delay-50"
+                  : "translate-y-1 opacity-0 duration-100",
+              )}
+              inert={!condensed}
+              data-workspace-scroll-swap
+            >
+              {detail ? (
+                <div className="flex min-w-0 items-center gap-2 px-4 pt-1 pb-1 text-meta text-muted-foreground">
+                  <PullRequestActorLabel
+                    actor={detail.author}
+                    profileUrl={authorProfileUrl}
+                    variant="avatar"
+                    className="shrink-0"
+                  />
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                          {detail.title}
+                        </span>
+                      }
+                    />
+                    <TooltipPopup side="top">{detail.title}</TooltipPopup>
+                  </Tooltip>
                   <span className="shrink-0">
                     <RelativeTime timestamp={detail.updatedAt} />
                   </span>
-                  {headerBranches}
+                  <span className="hidden min-w-0 flex-1 @2xl/pr-header:flex">{headerBranches}</span>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
-        </div>
 
-        {detail ? (
-          <nav
-            className="col-span-2 flex min-w-0 items-center px-4 pt-1.5 pb-3"
-            aria-label={gt(
-              "{term, select, mr {Merge request} cr {Change request} other {Pull request}} tabs",
-              { term: changeRequestTermKind(terminology) },
+          <div
+            className={cn(
+              "col-span-2 grid",
+              condensed
+                ? "grid-rows-[0fr]"
+                : "grid-rows-[1fr] transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
             )}
           >
-            <ToggleGroup
-              className="relative w-full"
-              size="segmented-wide"
-              variant="segmented-slide"
-              value={[tab]}
-              onValueChange={(next) => {
-                const nextTab = visibleTabs.find((item) => item.value === next[0])?.value;
-                if (nextTab) selectTab(nextTab);
-              }}
+            <div
+              ref={foldRef}
+              className={cn(
+                "min-h-0 overflow-hidden transition-[opacity,transform] duration-150 ease-out motion-reduce:transform-none motion-reduce:transition-none",
+                condensed
+                  ? "-translate-y-1 opacity-0 duration-100"
+                  : "translate-y-0 opacity-100 delay-50",
+              )}
+              inert={condensed}
+              data-workspace-scroll-swap
             >
-              <span
-                aria-hidden
-                className={cn(
-                  "pointer-events-none absolute top-px left-px h-6 rounded-md surface-raised",
-                  tabMotionActive && "transition-transform ease-out",
-                )}
-                style={{
-                  width: `calc((100% - 2px - ${visibleTabs.length - 1} * 0.125rem) / ${visibleTabs.length})`,
-                  transform: `translateX(calc(${Math.max(
-                    0,
-                    visibleTabs.findIndex((item) => item.value === tab),
-                  )} * (100% + 0.125rem)))`,
-                  ...(tabMotionActive ? { transitionDuration: `${tabMotionMs}ms` } : {}),
-                }}
-              />
-              {visibleTabs.map((item) => (
-                <Toggle
-                  key={item.value}
-                  value={item.value}
-                  className="@container/pr-tab flex-1"
-                  onPointerEnter={
-                    item.value === "code"
-                      ? () => {
-                          clearTimeout(codeIntentTimer.current);
-                          codeIntentTimer.current = setTimeout(intendCodeTab, 150);
-                        }
-                      : undefined
-                  }
-                  onPointerLeave={
-                    item.value === "code" ? () => clearTimeout(codeIntentTimer.current) : undefined
-                  }
-                  onFocus={item.value === "code" ? intendCodeTab : undefined}
-                >
-                  <item.icon aria-hidden className="hidden @max-[4.25em]/pr-tab:block" />
-                  <span className="@max-[4.25em]/pr-tab:sr-only">{item.label}</span>
-                </Toggle>
-              ))}
-            </ToggleGroup>
-          </nav>
-        ) : null}
-      </div>
-      <div
-        className={cn(
-          "grid shrink-0",
-          tab === "code" && detail ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        )}
-      >
-        <div className="min-h-0 overflow-hidden" inert={tab !== "code" || !detail}>
-          <div ref={setCodeToolbarContainer} className="flex px-4 pt-1 pb-2.5" />
-        </div>
-      </div>
-
-      <SourceControlAppAccessNotice
-        environmentId={environmentId}
-        provider={detail?.provider ?? repositoryIdentity?.provider}
-        host={reference.host}
-        repository={reference.repository}
-        className="border-b border-(--detail-separator)"
-      />
-      <div
-        className={cn(
-          "relative flex min-h-0 flex-1 flex-col overflow-hidden border-t",
-          detail && scrolledByTab[tab] ? "border-(--detail-separator)" : "border-transparent",
-        )}
-        onScrollCapture={(event) => {
-          const scroller = scrollerByTab.current[tab];
-          if (event.target !== scroller || scroller === null || scroller === undefined) return;
-          const top = scroller.scrollTop;
-          if (top > 0 !== (scrolledByTab[tab] ?? false)) {
-            setScrolledByTab({ ...scrolledByTab, [tab]: top > 0 });
-          }
-          const previous = condensedByTab[tab] ?? false;
-          const foldHeight = foldRef.current?.scrollHeight ?? 0;
-          let next = previous;
-          if (previous) {
-            if (top < 4 && foldHeight > 0) next = false;
-          } else if (foldHeight > 0 && top > foldHeight + 32) {
-            const chromeDelta = foldHeight - (condensedRowRef.current?.scrollHeight ?? 0);
-            compensationRef.current = { tab, scroller, target: top - chromeDelta };
-            next = true;
-          }
-          if (next !== previous) setCondensedByTab({ ...condensedByTab, [tab]: next });
-        }}
-      >
-        {detailQuery.error && !detail ? (
-          <PullRequestsUnavailableState
-            {...(isPullRequestNotFound(detailQuery.failure)
-              ? {
-                  title: gt(
-                    "{term, select, mr {Merge request} cr {Change request} other {Pull request}} #{number} not found",
-                    {
-                      term: changeRequestTermKind(terminology),
-                      number: reference.number,
-                    },
-                  ),
-                  error: gt(
-                    "It may be an issue rather than a {term, select, mr {merge request} cr {change request} other {pull request}}, or this account can't see it.",
-                    { term: changeRequestTermKind(terminology) },
-                  ),
-                }
-              : { error: detailQuery.error })}
-            refreshing={detailQuery.isPending}
-            onRetry={refreshDetail}
-            {...(unavailableHostUrl
-              ? {
-                  host: {
-                    url: unavailableHostUrl,
-                    openLabel: openOnHostLabel(
-                      sourceControlClients.get(repositoryIdentity?.provider),
-                      resolve,
-                    ),
-                  },
-                }
-              : {})}
-          />
-        ) : detail ? (
-          <PullRequestMarkdownContext value={markdownContext}>
-            {mountedTabs.has("summary") ? (
-              <div {...tabPaneProps("summary")}>
-                <PullRequestSummaryTab
-                  scrollerRef={scrollerRefs.summary}
-                  readiness={readinessCard}
-                  revealUrl={tab === "summary" ? revealUrl : undefined}
-                  onRevealSettled={settleReveal}
-                  environmentId={environmentId}
-                  threadRef={threadRef}
-                  reference={reference}
-                  detail={detail}
-                  activityPending={activityPending}
-                  activityError={activityError}
-                  pendingFinding={handoff}
-                  fixFindingLabel={handoffLabels.fixFinding}
-                  {...(canFixFindings ? { onFixFinding: startFixFinding } : {})}
-                  {...(attachTarget === null ? {} : { onAddToChat: addCommentToChat })}
-                  onRefresh={refreshDetail}
-                />
-              </div>
-            ) : null}
-            {mountedTabs.has("guide") ? (
-              <div
-                {...tabPaneProps("guide")}
-                // Read by the guide run notifier, which stays quiet for a guide on screen.
-                data-guide-shown={tab === "guide" ? guideKey : undefined}
-              >
-                <PullRequestGuideTab
-                  environmentId={environmentId}
-                  reference={reference}
-                  active={tab === "guide"}
-                  title={detail.title}
-                  workspaceRoot={detail.workspaceRoot}
-                  canComment={
-                    detail.capabilities.review.inlineComment && detail.viewerPermissions.comment
-                  }
-                  rangeComments={detail.capabilities.review.rangeComment === true}
-                  completionScope={pullRequestCompletionScope(detail, environmentId, reference)}
-                  onAskAboutLines={(comment, request) =>
-                    addSelectionToAgent({ comment, request }, { keepGuide: true })
-                  }
-                  onAskAboutStop={askAboutGuideStop}
-                  onFinishReview={
-                    detail.capabilities.review.verdicts.some((verdict) =>
-                      detail.viewerPermissions.verdicts.includes(verdict),
-                    )
-                      ? () => setOpenReviewRequest((count) => count + 1)
-                      : null
-                  }
-                  onOpenFile={openFileInCode}
-                  onTourShown={onGuideShown}
-                />
-              </div>
-            ) : null}
-            {mountedTabs.has("timeline") ? (
-              <div {...tabPaneProps("timeline")}>
-                {activityPending ? (
-                  <div tabIndex={-1} data-workspace-focus-default className="h-full outline-none">
-                    <PullRequestTimelineGhost />
-                  </div>
-                ) : activityError ? (
-                  <PullRequestActivityUnavailableState
-                    error={activityError}
-                    term={changeRequestTermKind(terminology)}
-                    onRetry={activityQuery.refresh}
-                  />
-                ) : (
-                  <PullRequestTimelineTab
-                    scrollerRef={scrollerRefs.timeline}
-                    detail={detail}
-                    environmentId={environmentId}
-                    threadRef={threadRef}
-                    order={timelineOrder}
-                    onOpenCommit={openCommit}
-                    {...(attachTarget === null ? {} : { onAddToChat: addCommentToChat })}
-                    onOpenCode={openFileInCode}
-                  />
-                )}
-              </div>
-            ) : null}
-            {mountedTabs.has("code") ? (
-              <div {...tabPaneProps("code")}>
-                <Suspense
-                  fallback={
-                    // Loading placeholders hold panel focus until the tab's scroller replaces them.
-                    <div tabIndex={-1} data-workspace-focus-default className="h-full outline-none">
-                      <DiffPanelLoadingState
-                        label={gt(
-                          "Loading {term, select, mr {merge request} cr {change request} other {pull request}} diff...",
-                          { term: changeRequestTermKind(terminology) },
-                        )}
-                      />
-                    </div>
-                  }
-                >
-                  <PullRequestCodeTab
-                    scrollerRef={scrollerRefs.code}
-                    toolbarContainer={codeToolbarContainer}
-                    onAddToAgentSelection={addSelectionToAgent}
+              {detail ? (
+                <div className="col-span-2 flex min-w-0 flex-col gap-1.5 px-4 pt-1.5 pb-2.5">
+                  <PullRequestTitleEditor
                     environmentId={environmentId}
                     reference={reference}
                     detail={detail}
-                    selectedCommitOid={selectedCodeCommitOid}
-                    onSelectedCommitChange={selectCodeCommit}
+                    canWriteSourceControl={canWriteSourceControl}
+                    value={titleDraft}
+                    onValueChange={(text) =>
+                      setTitleScope(text === null ? null : { pullRequestKey, text })
+                    }
+                  />
+                  <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-meta text-muted-foreground">
+                    <PullRequestActorLabel actor={detail.author} profileUrl={authorProfileUrl} />
+                    <span className="shrink-0">
+                      <RelativeTime timestamp={detail.updatedAt} />
+                    </span>
+                    {headerBranches}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {unseenHeadSha !== undefined && shownHeadSha !== undefined ? (
+            <div className="col-span-2 px-4 pb-2">
+              <Alert variant="warning">
+                <TriangleAlertIcon />
+                <AlertDescription>
+                  {gt("New commits were pushed. A merge or review still applies to {sha}.", {
+                    sha: shownHeadSha.slice(0, 7),
+                  })}
+                </AlertDescription>
+                <AlertAction>
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    disabled={isInvalidating}
+                    onClick={() => {
+                      // The pin moves once the host read that reloads the diff has been asked for.
+                      void refetchFromHost().then(() =>
+                        setSeenHead({ key: seenHeadKey, sha: unseenHeadSha }),
+                      );
+                    }}
+                  >
+                    {gt("Load new commits")}
+                  </Button>
+                </AlertAction>
+              </Alert>
+            </div>
+          ) : null}
+          {detail ? (
+            <nav
+              className="col-span-2 flex min-w-0 items-center px-4 pt-1.5 pb-3"
+              aria-label={gt(
+                "{term, select, mr {Merge request} cr {Change request} other {Pull request}} tabs",
+                { term: changeRequestTermKind(terminology) },
+              )}
+            >
+              <ToggleGroup
+                className="relative w-full"
+                size="segmented-wide"
+                variant="segmented-slide"
+                value={[tab]}
+                onValueChange={(next) => {
+                  const nextTab = visibleTabs.find((item) => item.value === next[0])?.value;
+                  if (nextTab) selectTab(nextTab);
+                }}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute top-px left-px h-6 rounded-md surface-raised",
+                    tabMotionActive && "transition-transform ease-out",
+                  )}
+                  style={{
+                    width: `calc((100% - 2px - ${visibleTabs.length - 1} * 0.125rem) / ${visibleTabs.length})`,
+                    transform: `translateX(calc(${Math.max(
+                      0,
+                      visibleTabs.findIndex((item) => item.value === tab),
+                    )} * (100% + 0.125rem)))`,
+                    ...(tabMotionActive ? { transitionDuration: `${tabMotionMs}ms` } : {}),
+                  }}
+                />
+                {visibleTabs.map((item) => (
+                  <Toggle
+                    key={item.value}
+                    value={item.value}
+                    className="@container/pr-tab flex-1"
+                    onPointerEnter={
+                      item.value === "code"
+                        ? () => {
+                            clearTimeout(codeIntentTimer.current);
+                            codeIntentTimer.current = setTimeout(intendCodeTab, 150);
+                          }
+                        : undefined
+                    }
+                    onPointerLeave={
+                      item.value === "code" ? () => clearTimeout(codeIntentTimer.current) : undefined
+                    }
+                    onFocus={item.value === "code" ? intendCodeTab : undefined}
+                  >
+                    <item.icon aria-hidden className="hidden @max-[4.25em]/pr-tab:block" />
+                    <span className="@max-[4.25em]/pr-tab:sr-only">{item.label}</span>
+                  </Toggle>
+                ))}
+              </ToggleGroup>
+            </nav>
+          ) : null}
+        </div>
+        <div
+          className={cn(
+            "grid shrink-0",
+            tab === "code" && detail ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="min-h-0 overflow-hidden" inert={tab !== "code" || !detail}>
+            <div ref={setCodeToolbarContainer} className="flex px-4 pt-1 pb-2.5" />
+          </div>
+        </div>
+
+        <SourceControlAppAccessNotice
+          environmentId={environmentId}
+          provider={detail?.provider ?? repositoryIdentity?.provider}
+          host={reference.host}
+          repository={reference.repository}
+          className="border-b border-(--detail-separator)"
+        />
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col overflow-hidden border-t",
+            detail && scrolledByTab[tab] ? "border-(--detail-separator)" : "border-transparent",
+          )}
+          onScrollCapture={(event) => {
+            const scroller = scrollerByTab.current[tab];
+            if (event.target !== scroller || scroller === null || scroller === undefined) return;
+            const top = scroller.scrollTop;
+            if (top > 0 !== (scrolledByTab[tab] ?? false)) {
+              setScrolledByTab({ ...scrolledByTab, [tab]: top > 0 });
+            }
+            const previous = condensedByTab[tab] ?? false;
+            const foldHeight = foldRef.current?.scrollHeight ?? 0;
+            let next = previous;
+            if (previous) {
+              if (top < 4 && foldHeight > 0) next = false;
+            } else if (foldHeight > 0 && top > foldHeight + 32) {
+              const chromeDelta = foldHeight - (condensedRowRef.current?.scrollHeight ?? 0);
+              compensationRef.current = { tab, scroller, target: top - chromeDelta };
+              next = true;
+            }
+            if (next === previous) return;
+            if (tab === "summary") summaryCondensedByScopeKey.set(tabScopeKey, next);
+            setCondensedByTab({ ...condensedByTab, [tab]: next });
+          }}
+        >
+          {detailQuery.error && !detail ? (
+            <PullRequestsUnavailableState
+              {...(isPullRequestNotFound(detailQuery.failure)
+                ? {
+                    title: gt(
+                      "{term, select, mr {Merge request} cr {Change request} other {Pull request}} #{number} not found",
+                      {
+                        term: changeRequestTermKind(terminology),
+                        number: reference.number,
+                      },
+                    ),
+                    error: gt(
+                      "It may be an issue rather than a {term, select, mr {merge request} cr {change request} other {pull request}}, or this account can't see it.",
+                      { term: changeRequestTermKind(terminology) },
+                    ),
+                  }
+                : { error: detailQuery.error })}
+              refreshing={detailQuery.isPending}
+              onRetry={refreshDetail}
+              {...(unavailableHostUrl
+                ? {
+                    host: {
+                      url: unavailableHostUrl,
+                      openLabel: openOnHostLabel(
+                        sourceControlClients.get(repositoryIdentity?.provider),
+                        resolve,
+                      ),
+                    },
+                  }
+                : {})}
+            />
+          ) : detail ? (
+            <PullRequestMarkdownContext value={markdownContext}>
+              {mountedTabs.has("summary") ? (
+                <div {...tabPaneProps("summary")}>
+                  <PullRequestSummaryTab
+                    scrollerRef={scrollerRefs.summary}
+                    readiness={readinessCard}
+                    revealUrl={tab === "summary" ? revealUrl : undefined}
+                    onRevealSettled={settleRevealStable}
+                    environmentId={environmentId}
+                    threadRef={threadRef}
+                    reference={reference}
+                    detail={detail}
+                    observedAt={observedAt}
+                    activityPending={activityPending}
+                    activityError={activityError}
                     pendingFinding={handoff}
                     fixFindingLabel={handoffLabels.fixFinding}
-                    {...(canFixFindings ? { onFixFinding: startFixFinding } : {})}
-                    {...(attachTarget === null ? {} : { onAddToChat: addCommentToChat })}
+                    {...(canFixFindings ? { onFixFinding: startFixFindingStable } : {})}
+                    {...(attachTarget === null ? {} : { onAddToChat: addCommentToChatStable })}
                     onRefresh={refreshDetail}
-                    refreshToken={refreshToken}
-                    backgroundRefreshToken={turnRefresh ?? 0}
-                    revealRequest={codeRevealRequest}
-                    revealUrl={tab === "code" ? revealUrl : undefined}
-                    onRevealSettled={settleReveal}
                   />
-                </Suspense>
-              </div>
-            ) : null}
-          </PullRequestMarkdownContext>
+                </div>
+              ) : null}
+              {mountedTabs.has("guide") ? (
+                <div
+                  {...tabPaneProps("guide")}
+                  // Read by the guide run notifier, which stays quiet for a guide on screen.
+                  data-guide-shown={tab === "guide" ? guideKey : undefined}
+                >
+                  <PullRequestGuideTab
+                    environmentId={environmentId}
+                    reference={reference}
+                    active={tab === "guide"}
+                    title={detail.title}
+                    workspaceRoot={detail.workspaceRoot}
+                    canComment={
+                      detail.capabilities.review.inlineComment && detail.viewerPermissions.comment
+                    }
+                    rangeComments={detail.capabilities.review.rangeComment === true}
+                    completionScope={pullRequestCompletionScope(detail, environmentId, reference)}
+                    onAskAboutLines={(comment, request) =>
+                      addSelectionToAgent({ comment, request }, { keepGuide: true })
+                    }
+                    onAskAboutStop={askAboutGuideStop}
+                    onFinishReview={
+                      detail.capabilities.review.verdicts.some((verdict) =>
+                        detail.viewerPermissions.verdicts.includes(verdict),
+                      )
+                        ? () => setOpenReviewRequest((count) => count + 1)
+                        : null
+                    }
+                    onOpenFile={openFileInCode}
+                    onTourShown={onGuideShown}
+                  />
+                </div>
+              ) : null}
+              {mountedTabs.has("timeline") ? (
+                <div {...tabPaneProps("timeline")}>
+                  {activityPending ? (
+                    <div tabIndex={-1} data-workspace-focus-default className="h-full outline-none">
+                      <PullRequestTimelineGhost />
+                    </div>
+                  ) : activityError ? (
+                    <PullRequestActivityUnavailableState
+                      error={activityError}
+                      term={changeRequestTermKind(terminology)}
+                      onRetry={activityQuery.refresh}
+                    />
+                  ) : (
+                    <PullRequestTimelineTab
+                      scrollerRef={scrollerRefs.timeline}
+                      detail={detail}
+                      environmentId={environmentId}
+                      threadRef={threadRef}
+                      order={timelineOrder}
+                      onOpenCommit={openCommit}
+                      {...(attachTarget === null ? {} : { onAddToChat: addCommentToChat })}
+                      onOpenCode={openFileInCode}
+                    />
+                  )}
+                </div>
+              ) : null}
+              {mountedTabs.has("code") ? (
+                <div {...tabPaneProps("code")}>
+                  <Suspense
+                    fallback={
+                      // Loading placeholders hold panel focus until the tab's scroller replaces them.
+                      <div tabIndex={-1} data-workspace-focus-default className="h-full outline-none">
+                        <DiffPanelLoadingState
+                          label={gt(
+                            "Loading {term, select, mr {merge request} cr {change request} other {pull request}} diff...",
+                            { term: changeRequestTermKind(terminology) },
+                          )}
+                        />
+                      </div>
+                    }
+                  >
+                    <PullRequestCodeTab
+                      scrollerRef={scrollerRefs.code}
+                      toolbarContainer={codeToolbarContainer}
+                      onAddToAgentSelection={addSelectionToAgent}
+                      environmentId={environmentId}
+                      reference={reference}
+                      detail={detail}
+                      selectedCommitOid={selectedCodeCommitOid}
+                      onSelectedCommitChange={selectCodeCommit}
+                      pendingFinding={handoff}
+                      fixFindingLabel={handoffLabels.fixFinding}
+                      {...(canFixFindings ? { onFixFinding: startFixFinding } : {})}
+                      {...(attachTarget === null ? {} : { onAddToChat: addCommentToChat })}
+                      onRefresh={refreshDetail}
+                      refreshToken={refreshToken}
+                      backgroundRefreshToken={turnRefresh ?? 0}
+                      revealRequest={codeRevealRequest}
+                      revealUrl={tab === "code" ? revealUrl : undefined}
+                      onRevealSettled={settleReveal}
+                    />
+                  </Suspense>
+                </div>
+              ) : null}
+            </PullRequestMarkdownContext>
+          ) : null}
+        </div>
+
+        {/* Float over the content; do not reserve a footer or padding in the PR tabs. Inset 16 on
+            both sides: the content's right line and its bottom padding. */}
+        {detail ? (
+          <div className="absolute right-4 bottom-4 z-20">
+            <PullRequestComposer
+              key={JSON.stringify([
+                environmentId,
+                reference.projectId,
+                reference.host,
+                reference.repository,
+                reference.number,
+              ])}
+              environmentId={environmentId}
+              reference={reference}
+              detail={detail}
+              shownHeadSha={shownHeadSha}
+              actionPending={actionPending}
+              onCommentAction={performCommentAction}
+              onCommented={refreshDetail}
+              onReviewSubmitted={refreshDetail}
+              openReviewRequest={openReviewRequest}
+            />
+          </div>
         ) : null}
       </div>
-
-      {/* Float over the content; do not reserve a footer or padding in the PR tabs. Inset 16 on
-          both sides: the content's right line and its bottom padding. */}
-      {detail ? (
-        <div className="absolute right-4 bottom-4 z-20">
-          <PullRequestComposer
-            key={JSON.stringify([
-              environmentId,
-              reference.projectId,
-              reference.host,
-              reference.repository,
-              reference.number,
-            ])}
-            environmentId={environmentId}
-            reference={reference}
-            detail={detail}
-            actionPending={actionPending}
-            onCommentAction={performCommentAction}
-            onCommented={refreshDetail}
-            onReviewSubmitted={refreshDetail}
-            openReviewRequest={openReviewRequest}
-          />
-        </div>
-      ) : null}
-    </div>
+    </SharedTooltipProvider>
   );
 }

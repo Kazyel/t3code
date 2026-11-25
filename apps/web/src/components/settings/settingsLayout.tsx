@@ -931,13 +931,23 @@ export function SettingsSearchField({
       </InputGroupAddon>
       <InputGroupInput
         ref={inputRef}
-        type="search"
+        // Native search inputs clear on Escape even during IME composition.
+        type="text"
+        role="searchbox"
+        enterKeyHint="search"
         value={value}
         onChange={(event) => onChange(event.currentTarget.value)}
         onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
+          const isBareEscape =
+            event.key === "Escape" &&
+            !event.altKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.shiftKey;
+          if (!isBareEscape || event.nativeEvent.isComposing || event.keyCode === 229) return;
           event.preventDefault();
-          if (value.length > 0) {
+          // A held Escape keeps clearing instead of leaving the page.
+          if (value.length > 0 || event.repeat) {
             event.stopPropagation();
             onChange("");
           } else event.currentTarget.blur();

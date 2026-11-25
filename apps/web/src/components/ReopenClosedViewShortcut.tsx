@@ -24,6 +24,7 @@ import { isModelPickerOpen } from "../modelPickerVisibility";
 import {
   planNextReopen,
   closedChatTarget,
+  issuesSearchForRestore,
   pullRequestsSearchForRestore,
   reopenClosedView,
 } from "../reopenClosedView";
@@ -193,17 +194,20 @@ export function ReopenClosedViewShortcut() {
               to: "/$environmentId/$threadId",
               params: buildThreadRouteParams(target.threadRef),
             });
-    } else if (globalPullRequests) {
+    } else if (globalPullRequests || globalIssues) {
       const selected = selectSelectedRightPanelSurface(
         useRightPanelStore.getState().byThreadKey,
         ref,
       );
-      destination = linkOptions({
-        to: "/pull-requests",
-        search: (previous) => pullRequestsSearchForRestore(previous, selected),
-      });
-    } else if (globalIssues) {
-      destination = linkOptions({ to: "/issues", search: readIssueListPreferences() });
+      destination = globalPullRequests
+        ? linkOptions({
+            to: "/pull-requests",
+            search: (previous) => pullRequestsSearchForRestore(previous, selected),
+          })
+        : linkOptions({
+            to: "/issues",
+            search: issuesSearchForRestore(readIssueListPreferences(), selected),
+          });
     } else if (isThreadlessSurfacesRef(ref)) {
       // A threadless surface has no route; its tab shows it.
       return;

@@ -231,14 +231,9 @@ export function AssistantCitationChip({
     if (dismissal.kind === "commit") return commentEditor?.onSave(dismissal.comment) ?? true;
     return dismissal.kind !== "keep-open";
   };
+  // The timeline virtualizes rows, so a vanished source is routine; the user may still be typing.
   const onSourceUnavailable = useEffectEvent(() => {
-    if (!sourceAnchor) return;
-    if (settleDraftOnClose("none")) {
-      commentEditor?.onOpenChange(false);
-    } else {
-      // Keep the draft mounted and stop tracking the detached range.
-      setUnavailableSourceAnchor(sourceAnchor);
-    }
+    if (sourceAnchor) setUnavailableSourceAnchor(sourceAnchor);
   });
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- observes the cited DOM source while the comment editor is open and reacts when it disappears
   useEffect(() => {

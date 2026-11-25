@@ -77,6 +77,8 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+shift+d", command: "composer.dictation", when: "!terminalFocus" },
   { key: "mod+n", command: "terminal.new", when: "terminalFocus" },
   { key: "mod+w", command: "terminal.close", when: "terminalFocus" },
+  { key: "ctrl+alt+[", command: "terminal.previous", when: "terminalFocus && !isMac" },
+  { key: "ctrl+alt+]", command: "terminal.next", when: "terminalFocus && !isMac" },
   // cmd+W closes the focused tab.
   { key: "mod+w", command: "tab.close", when: "!terminalFocus" },
   { key: "mod+shift+t", command: "view.reopenClosed" },
@@ -118,8 +120,9 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+alt+end", command: "layout.focusLastColumn" },
   { key: "mod+alt+r", command: "layout.cycleColumnWidth" },
   { key: "mod+alt+c", command: "layout.centerColumn" },
-  { key: "mod+alt+[", command: "layout.pullLeft" },
-  { key: "mod+alt+]", command: "layout.pullRight" },
+  // Outside terminals: on Windows/Linux ctrl+alt+[ / ] cycle a focused terminal.
+  { key: "mod+alt+[", command: "layout.pullLeft", when: "!terminalFocus" },
+  { key: "mod+alt+]", command: "layout.pullRight", when: "!terminalFocus" },
   { key: "mod+/", command: "layout.shortcutSheet" },
   // Workspaces stack vertically: U goes down to the next, I up (niri).
   { key: "mod+alt+u", command: "layout.focusWorkspaceDown" },
@@ -192,6 +195,8 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+o", command: "editor.openFavorite" },
   { key: "mod+shift+[", command: "thread.previous" },
   { key: "mod+shift+]", command: "thread.next" },
+  { key: "cmd+shift+[", command: "terminal.previous", when: "terminalFocus && isMac" },
+  { key: "cmd+shift+]", command: "terminal.next", when: "terminalFocus && isMac" },
   { key: "mod+shift+c", command: "thread.copyReference", when: "!terminalFocus" },
   { key: "mod+shift+s", command: "thread.settle", when: "!terminalFocus" },
   { key: "mod+shift+p", command: "thread.pin", when: "!terminalFocus" },

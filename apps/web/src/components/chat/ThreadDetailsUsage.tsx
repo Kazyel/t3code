@@ -41,6 +41,7 @@ import {
   nextPoolReset,
   poolSources,
   resolveThreadDetailsLimits,
+  resolveThreadHttpQuotas,
 } from "./ThreadDetailsUsage.logic";
 
 const USAGE_ROW_CLASS =
@@ -104,9 +105,12 @@ export function ThreadDetailsUsage({
       ? limitPoolNotice(providerInstanceId, providers, sources)
       : null;
   const notice = pool ? null : (poolNotice ?? ownNotice);
+  // HTTP quota accounts bound to this instance stand in for its notice when it reports none.
+  const quotas = resolveThreadHttpQuotas(providerInstanceId, sources);
+  const limitRowsHidden = notice !== null || rows.length === 0;
   return (
     <ThreadDetailsSection title={gt("Usage limits")} variant="usage">
-      {notice || !rows.length ? (
+      {limitRowsHidden && quotas.length === 0 ? (
         <UsageRow
           label={gt("Limits", { $context: "usage limits row label" })}
           icon={<TimerIcon />}
@@ -122,16 +126,18 @@ export function ThreadDetailsUsage({
         />
       ) : (
         <>
-          {(folded ? fold.shown : rows).map(({ window, accounts, sources }) => (
-            <LimitRow
-              key={window.id}
-              window={window}
-              now={now}
-              pooledAccounts={accounts}
-              sources={sources}
-            />
-          ))}
-          {fold.hidden.length > 0 ? (
+          {(limitRowsHidden ? [] : folded ? fold.shown : rows).map(
+            ({ window, accounts, sources }) => (
+              <LimitRow
+                key={window.id}
+                window={window}
+                now={now}
+                pooledAccounts={accounts}
+                sources={sources}
+              />
+            ),
+          )}
+          {!limitRowsHidden && fold.hidden.length > 0 ? (
             <ThreadDetailsControl
               size="sm"
               variant="ghost"
@@ -146,6 +152,16 @@ export function ThreadDetailsUsage({
               </span>
             </ThreadDetailsControl>
           ) : null}
+          {quotas.map(({ key, accountLabel, window }) => (
+            <LimitRow
+              key={key}
+              window={window}
+              now={now}
+              pooledAccounts={1}
+              sources={[]}
+              accountLabel={accountLabel}
+            />
+          ))}
         </>
       )}
     </ThreadDetailsSection>
@@ -323,11 +339,13 @@ function LimitRow({
   now,
   pooledAccounts,
   sources,
+  accountLabel,
 }: {
   readonly window: ServerProviderUsageWindow;
   readonly now: number;
   readonly pooledAccounts: number;
   readonly sources: ReadonlyArray<string>;
+  readonly accountLabel?: string;
 }) {
   const gt = useGT();
   const m = useMessages();
@@ -364,6 +382,7 @@ function LimitRow({
           <span className="text-foreground">
             {gt("{label}: {left}% left", { label: window.label, left })}
           </span>
+          {accountLabel ? <span className="text-muted-foreground">{accountLabel}</span> : null}
           {pace && timeLeft !== null ? (
             <span>
               <span className="block">{m(PACE_LABEL[pace])}</span>

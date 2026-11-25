@@ -388,6 +388,8 @@
   "638678077ba2e050": "{count, plural, one {Tried to review {count} pull request} other {Tried to review {count} pull requests}}",
   "420bea546d5f8802": "Thread copied",
   "2efb2dd3bf170f67": "Failed to copy thread",
+  "6c03545936b55e0b": "PR link copied",
+  "1b88f6a5e9fdeea7": "Failed to copy PR link",
   "18786351520c79d5": "{shortLabel} link copied",
   "ff8d722c3ae4d1fa": "Failed to copy {shortLabel} link",
   "b063ecd06059857f": "Compacting before the cache expires…",
@@ -498,6 +500,7 @@
   "bc24c300d53d61c5": "{host} did not answer on any saved route.",
   "b0dd3cd876937ca8": "Connection profile {connectionId} is unavailable.",
   "5ce46783e79ca9d1": "Connection credential {connectionId} is unavailable.",
+  "b39d1428ec8b23f5": "This address now runs a different T3 Code install ({actual}, not {expected}). Remove this connection and add it again.",
   "0bda0cac7f5acc20": "Connected environment {actual} does not match {expected}.",
   "ea0d3e4e51d5706f": "The environment credential is invalid.",
   "7283ebfd16d09677": "The environment credential does not grant the required access.",
@@ -792,6 +795,8 @@
   "77231250643f4943": "This {build, select, nightly {Nightly} other {Stable}} build can't update from the {saved, select, nightly {Nightly} other {Stable}} track on its own. Switch the update track back to {build, select, nightly {Nightly} other {Stable}}, or use Review beside Update track to retry the switch to {saved, select, nightly {Nightly} other {Stable}}.",
   "43ed503038717b90": "Server update failed:",
   "a8cb0a2b46270859": "Could not synchronize environment data.",
+  "4731d4616735186c": "{count, plural, one {Kicked off {count} subagent} other {Kicked off {count} subagents}}",
+  "885110d4e416d2cd": "{count, plural, one {Ran {count} subagent} other {Ran {count} subagents}}",
   "6b785358f5d62f75": "{count} working",
   "5af3bd99008c10b8": "{count} done",
   "3098c20a7dc58f99": "{count} failed",
@@ -816,6 +821,7 @@
   "21872f69ccbc711d": "Starting {provider} MCP servers",
   "fedaa29ff8815a77": "Loading {provider} hooks",
   "57025ae4de5beb57": "Loading {provider} rules and skills",
+  "1cbfbcad9f0d04fe": "Resuming {provider} session",
   "4729a188600f1501": "Connecting to {provider}",
   "8c8977097681630f": "Starting {provider}",
   "f1d27d127ab27ac6": "Starting",
@@ -1917,6 +1923,7 @@
   "69c659d8b6e271cc": "The page asks for a file.",
   "a6efeb99b479990a": "Choose files",
   "59c87648d44b958c": "Choose file",
+  "6f321f153b8711bb": "Choose an option",
   "61a552a67e9e3eac": "Dialog response",
   "1d9bd868fafea18a": "Dismiss",
   "1d0a7acef4a95536": "Accept",
@@ -3799,6 +3806,68 @@
   "ed83b25c71c98a20": "Pick one or more {tracker} {scope}s for each project. Their issues list beside the repository's own, and agents file new issues in the first one unless asked for another.",
   "99d51127f573296b": "Another account",
   "8ec2c57414669b79": "Connect a second {tracker} workspace or user.",
+  "892f08d21b8e48a9": "Merge {layers} into {base} using {kind, select, squash {squash} merge {merge} rebase {rebase} fastForward {fast-forward} other {{method}}} once their requirements are met. This may happen immediately.",
+  "89bf40eb2503b6c5": "New device signed in to {environment}",
+  "c94b5fe9ef372bc0": "{device} connected through {product}. If this was not you, remove it in Settings → Access in T3 Code on that computer.",
+  "bec67d0ed485f885": "{count, plural, one {{count} device} other {{count} devices}} connected through {product}. If this was not you, remove them in Settings → Access in T3 Code on that computer.",
+  "18c30aa94d0a807f": "Connection diagnostics",
+  "eb287395a09cd288": "Send connection traces",
+  "6787f93bbf6ce0b6": "Helps the T3 Code team fix connection problems. Traces hold timings, error types, an ID for this app session, and the app version, never your threads, prompts, or code. You can change this in Settings > About T3 Code > Diagnostics.",
+  "0b1e4aecbd38e0cf": "When the app connects to a computer through {product}, it sends the T3 Code team how long each step took, any error type, an ID for this app session, and the app version. Traces never include your threads, prompts, or code.",
+  "e0856d6a402ad821": "{organization}'s policy does not allow project worktree layout commands.",
+  "7150557773b3818b": "Queued",
+  "efbeb3993ee2c3f5": "Queued for {pool}",
+  "0398ca6c1d24b92d": "queued, next in line",
+  "0af6d5ffd5166214": "{count, plural, one {queued, {count} ahead} other {queued, {count} ahead}}",
+  "e114d37b32ab0dc7": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " needs a reason."
+  ],
+  "7e1fd2eb570a372b": "{who} answered {choice}",
+  "a3c43735e1a81498": "Reason for {title}",
+  "bfad234f016cfa3f": "Why, in a sentence. It goes with whichever answer you pick.",
+  "3759768c5d342c22": [
+    "answered",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "8afa4fbe16f95bcf": [
+    "by ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ",",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "0f93532dd76391fc": "You answered {choice}",
+  "235902a19e95833b": [
+    "by you,",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "1a1beecff68a6e61": "Verify Google account",
+  "99451a5d2d40440f": "Withdrawn by {by}.",
+  "3ee30a50b70fffab": "Withdrawn by {by}: {reason}",
+  "201490988858b511": "withdrawn by {by}",
   "ce2136b36f87b655": "Connect this environment to change its settings.",
   "a90a441fd0e08de7": "This environment",
   "32fb83554cfd85b4": "Transcription models",
@@ -4172,6 +4241,7 @@
   "75d18dac06f4f037": "Skills",
   "d384fcf737bd3c54": "Mentions",
   "caabad88e067f9ef": "Searching files…",
+  "26ffce7329da1fcc": "No matching pull requests.",
   "cc3a99fa77770432": "No matching pull requests or threads.",
   "4532ebb7ce1d3257": "No matching mentions.",
   "1c2f899f6eb7aa4b": "No skills found.",
@@ -4343,6 +4413,21 @@
       "v": "v"
     },
     " app left its page and was stopped"
+  ],
+  "796b81c4875c4feb": [
+    "The ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " app needs a newer ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    " server on this environment. Update the server to use it."
   ],
   "5ef18e4d39b398bf": [
     "Unable to load the ",
@@ -4912,6 +4997,7 @@
   "306a6f95ad9d52f7": "Unsent",
   "11276ab6c58b7a25": "Opens the draft in the new task composer. Swipe left to discard.",
   "99950f3a28d425fa": "Sends when the environment reconnects. Opens the task for editing. Swipe left to delete.",
+  "d71048f4fb9cf44a": "Waiting to sync",
   "02c0ae493e689f90": "Goal",
   "0a260c7744afd0be": "Waiting",
   "be451f475c514b37": "Dismiss Woke notification",
@@ -5341,6 +5427,9 @@
   "744127f8dfad7d22": "Connect an environment to see its workflow runs.",
   "b9aae2f7cdb1a379": "No workflow runs yet",
   "ace8fc1c643cf9f6": "A workflow ties agents, code, schedules and questions to you into one run that survives restarts. Write one on your computer, under Workflows, then Definitions.",
+  "fc9c3a00cfc18b55": "All kinds",
+  "e4d1316c85ed7066": "No questions of this kind wait on you.",
+  "45a94c724845ec1d": "Other",
   "fceb81aa6685fb47": "Chats",
   "86798f07ba2d7f4d": "Search issues",
   "484cd83bb303bab8": "Search pull requests",

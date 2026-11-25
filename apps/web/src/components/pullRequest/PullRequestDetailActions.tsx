@@ -16,7 +16,7 @@ import { useInlineActionConfirm } from "./useInlineActionConfirm";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import { Button } from "../ui/button";
 import { RefreshIcon } from "../ui/refresh-icon";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 import {
   MenuGroup,
   MenuGroupLabel,
@@ -279,23 +279,21 @@ export function PullRequestStateBadge({
   label: string;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <div
-            data-slot="state-badge"
-            className={cn(
-              "surface-tint flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-control px-3 text-label sm:h-7 [&>svg]:shrink-0",
-              STATE_BADGE_TONES[tone],
-            )}
-          />
-        }
-      >
-        {icon}
-        <span className="min-w-0 truncate">{label}</span>
-      </TooltipTrigger>
-      <TooltipPopup side="top">{label}</TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <div
+          data-slot="state-badge"
+          className={cn(
+            "surface-tint flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-control px-3 text-label sm:h-7 [&>svg]:shrink-0",
+            STATE_BADGE_TONES[tone],
+          )}
+        />
+      }
+      label={label}
+    >
+      {icon}
+      <span className="min-w-0 truncate">{label}</span>
+    </SharedTooltipTrigger>
   );
 }
 

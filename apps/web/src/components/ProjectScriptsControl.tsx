@@ -98,6 +98,7 @@ interface ProjectScriptsControlProps {
   threadId?: ThreadId;
   scripts: ReadonlyArray<ProjectScript>;
   fileScripts?: ReadonlyArray<T3ProjectFileScript>;
+  onActionsMenuOpen?: () => void;
   preferredScriptId?: string | null;
   onRunScript?: ((script: ProjectScript) => void) | undefined;
   onAddScript: (input: NewProjectScriptInput) => Promise<ProjectScriptActionResult>;
@@ -116,6 +117,7 @@ export default function ProjectScriptsControl({
   threadId,
   scripts,
   fileScripts = NO_FILE_SCRIPTS,
+  onActionsMenuOpen,
   preferredScriptId = null,
   onRunScript,
   onAddScript,
@@ -149,6 +151,10 @@ export default function ProjectScriptsControl({
   if (actionsMenuOpen.presentation !== presentation) {
     setActionsMenuOpen({ presentation, scripts: false, imports: false });
   }
+  const openActionsMenu = (menus: { scripts: boolean; imports: boolean }) => {
+    if (menus.scripts || menus.imports) onActionsMenuOpen?.();
+    setActionsMenuOpen({ presentation, ...menus });
+  };
   const [editorRequest, setEditorRequest] = useState<ProjectScriptEditorRequest | null>(null);
   const editorRequestIdRef = React.useRef(0);
 
@@ -431,9 +437,7 @@ export default function ProjectScriptsControl({
           {scripts.length > 0 || importableScripts.length > 0 ? (
             <MenuSub
               open={actionsMenuOpen.scripts}
-              onOpenChange={(open) =>
-                setActionsMenuOpen({ presentation, scripts: open, imports: false })
-              }
+              onOpenChange={(open) => openActionsMenu({ scripts: open, imports: false })}
             >
               <MenuSubTrigger density="touch">
                 <ScriptIcon icon="play" className="size-4" />
@@ -508,9 +512,7 @@ export default function ProjectScriptsControl({
           ) : null}
           <Menu
             open={actionsMenuOpen.scripts}
-            onOpenChange={(open) =>
-              setActionsMenuOpen({ presentation, scripts: open, imports: false })
-            }
+            onOpenChange={(open) => openActionsMenu({ scripts: open, imports: false })}
           >
             <Tooltip>
               <TooltipTrigger
@@ -563,9 +565,7 @@ export default function ProjectScriptsControl({
           <GroupSeparator className="hidden @4xl/header-actions:block" />
           <Menu
             open={actionsMenuOpen.scripts}
-            onOpenChange={(open) =>
-              setActionsMenuOpen({ presentation, scripts: open, imports: false })
-            }
+            onOpenChange={(open) => openActionsMenu({ scripts: open, imports: false })}
           >
             <Tooltip>
               <TooltipTrigger
@@ -603,9 +603,7 @@ export default function ProjectScriptsControl({
         <Menu
           highlightItemOnHover={false}
           open={actionsMenuOpen.imports}
-          onOpenChange={(open) =>
-            setActionsMenuOpen({ presentation, scripts: false, imports: open })
-          }
+          onOpenChange={(open) => openActionsMenu({ scripts: false, imports: open })}
         >
           <MenuTrigger
             render={<Button size="sm" variant="secondary" aria-label={gt("Project actions")} />}

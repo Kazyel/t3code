@@ -33,7 +33,14 @@ import {
   visibleThreadPullRequests,
 } from "@t3tools/client-runtime/thread-pull-requests";
 import { useRender } from "@base-ui/react/use-render";
-import { type AnimationEvent, type MouseEvent, type PointerEvent, type ReactElement } from "react";
+import {
+  type AnimationEvent,
+  type ComponentType,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { cn } from "../lib/utils";
 import { revealThreadTerminal } from "../lib/revealThreadTerminal";
 
@@ -499,27 +506,72 @@ function PullRequestBadge({
     },
   });
   return (
-    <Tooltip key={opensList ? "list" : "link"}>
+    <ThreadLinkBadge
+      key={opensList ? "list" : "link"}
+      control={control}
+      appearance={appearance}
+      Icon={presentation.Icon}
+      toneClassName={presentation.toneClassName}
+      // The draft tone is dimmer here than main's draft gray, so a draft number keeps the label color.
+      textClassName={
+        appearance === "number" &&
+        presentation.toneClassName === PULL_REQUEST_STATE_PRESENTATION.draft.toneClassName
+          ? "text-secondary-label"
+          : undefined
+      }
+      text={presentation.text}
+    >
+      {visibleThreadPullRequests(pullRequests).length > 0 ? (
+        <ThreadPullRequestsMiniList
+          pullRequests={pullRequests}
+          onOpenPullRequest={onOpenPullRequest}
+          onPressPullRequest={onPressPullRequest}
+        />
+      ) : number !== undefined && url !== undefined ? (
+        <ul className="flex flex-col gap-1">
+          <ThreadPullRequestMiniListItem
+            number={number}
+            url={url}
+            title={status?.tooltipTitle ?? presentation.label}
+            presentation={presentation}
+            onOpenPullRequest={onOpenPullRequest}
+            onPressPullRequest={onPressPullRequest}
+          />
+        </ul>
+      ) : null}
+    </ThreadLinkBadge>
+  );
+}
+
+export function ThreadLinkBadge({
+  control,
+  appearance = "glyph",
+  Icon,
+  toneClassName,
+  textClassName,
+  text,
+  children,
+}: {
+  control: ReactElement;
+  appearance?: ThreadPullRequestBadgeAppearance;
+  Icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  toneClassName?: string | undefined;
+  textClassName?: string | undefined;
+  text: string | number;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
       <TooltipTrigger render={control}>
         <span
           className={cn(
             "contents tabular-nums",
             appearance === "number" ? "text-meta" : "font-normal text-xs",
-            presentation.toneClassName,
+            toneClassName,
           )}
         >
-          <presentation.Icon aria-hidden className="size-3 shrink-0" />
-          {/* The draft tone is dimmer here than main's draft gray, so a draft number keeps the label color. */}
-          <span
-            className={
-              appearance === "number" &&
-              presentation.toneClassName === PULL_REQUEST_STATE_PRESENTATION.draft.toneClassName
-                ? "text-secondary-label"
-                : undefined
-            }
-          >
-            {presentation.text}
-          </span>
+          <Icon aria-hidden className="size-3 shrink-0" />
+          <span className={cn("max-w-16 truncate", textClassName)}>{text}</span>
         </span>
       </TooltipTrigger>
       <TooltipPopup
@@ -527,26 +579,10 @@ function PullRequestBadge({
         sideOffset={0}
         variant="popover"
         className="pointer-events-auto w-80 max-w-[calc(100vw-2rem)] text-left whitespace-normal"
+        onContextMenu={(event) => event.stopPropagation()}
       >
         <div className="-mx-1 max-h-[calc(var(--available-height)-0.5rem-2px)] overflow-y-auto overscroll-contain">
-          {visibleThreadPullRequests(pullRequests).length > 0 ? (
-            <ThreadPullRequestsMiniList
-              pullRequests={pullRequests}
-              onOpenPullRequest={onOpenPullRequest}
-              onPressPullRequest={onPressPullRequest}
-            />
-          ) : number !== undefined && url !== undefined ? (
-            <ul className="flex flex-col gap-1">
-              <ThreadPullRequestMiniListItem
-                number={number}
-                url={url}
-                title={status?.tooltipTitle ?? presentation.label}
-                presentation={presentation}
-                onOpenPullRequest={onOpenPullRequest}
-                onPressPullRequest={onPressPullRequest}
-              />
-            </ul>
-          ) : null}
+          {children}
         </div>
       </TooltipPopup>
     </Tooltip>

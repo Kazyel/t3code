@@ -762,8 +762,6 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
     canScrollRight: false,
   });
 
-  if (props.open === false && addSurfaceMenuOpen) setAddSurfaceMenuOpen(false);
-
   const updateTabScrollState = (viewport: HTMLDivElement) => {
     const hasOverflow = viewport.scrollWidth - viewport.clientWidth > TAB_SCROLL_EDGE_TOLERANCE;
     const canScrollLeft = hasOverflow && viewport.scrollLeft > TAB_SCROLL_EDGE_TOLERANCE;
@@ -843,6 +841,9 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
         : {}),
     },
   });
+  const canAddSurface = addSurfaceActions.some((action) => action.available);
+
+  if ((props.open === false || !canAddSurface) && addSurfaceMenuOpen) setAddSurfaceMenuOpen(false);
 
   const handleAddSurfaceMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const action = surfaceShortcutActionForKey(addSurfaceActions, event.nativeEvent);
@@ -1040,7 +1041,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
     paneTabsId !== null ? (
       <LayoutNewTabButton tabId={paneTabsId} />
     ) : // A notch keeps it while empty too: an empty notch reads as a broken corner.
-    props.open !== false || props.surfaces.length > 0 || notched ? (
+    canAddSurface && (props.open !== false || props.surfaces.length > 0 || notched) ? (
       <Menu open={addSurfaceMenuOpen} onOpenChange={setAddSurfaceMenuOpen}>
         <MenuTrigger
           render={

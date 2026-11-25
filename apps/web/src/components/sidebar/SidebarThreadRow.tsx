@@ -1,5 +1,5 @@
 import { asLaunchingThread } from "@t3tools/client-runtime/state/thread-inbox";
-import { useAtomMount } from "@effect/atom-react";
+import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import { formatModelSlugName } from "@t3tools/shared/model";
 import { ThreadHoverCard, ThreadHoverCardPopup } from "../ThreadHoverCard";
 import { ThreadTerminalStatusButton } from "../ThreadStatusIndicators";
@@ -84,7 +84,12 @@ import { useNowSecond } from "../../hooks/useNowSecond";
 import { vcsEnvironment, vcsBranchRevalidation } from "../../state/vcs";
 import { useSidebarLinkedIssueState } from "../../state/issues";
 import { useEnvironmentQuery } from "../../state/query";
-import { readEnvironmentScope, useEnvironmentScope } from "../../state/session";
+import { threadEnvironment } from "../../state/threads";
+import {
+  readEnvironmentScope,
+  useEnvironmentScope,
+  useEnvironmentScopeDenied,
+} from "../../state/session";
 import { formatRelativeTime, parseTimestampDate } from "../../timestampFormat";
 import type { SidebarThreadSummary } from "../../types";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
@@ -109,6 +114,7 @@ import {
 } from "../Sidebar.logic";
 import { resolveLocalCheckoutBranchMismatch } from "../BranchToolbar.logic";
 import {
+  ThreadLinkBadge,
   ThreadPullRequestBadgeControl,
   ThreadPullRequestMiniListItem,
   ThreadPullRequestsMiniList,
@@ -139,6 +145,7 @@ import { observeVisibleAnimation } from "~/lib/visibleAnimation";
 import { useThreadHasUnsentDraft } from "../../composerDraftStore";
 import { ThreadDetailsIssueRows } from "../chat/ThreadDetailsIssueRows";
 import { IssueGlyph, issueStatePresentation } from "../issue/issuePresentation";
+import { useThreadIntentPrefetch } from "./useThreadIntentPrefetch";
 
 // The fields thread rows show. Provider status pushes refresh `checkedAt`,
 // status and auth on every provider; leaving those out keeps each
@@ -158,6 +165,19 @@ function compactSidebarTimeLabel(timestamp: string, nowMs: number, resolve: Mess
   const parts = formatRelativeTime(timestamp, nowMs, resolve);
   if (parts === null) return "";
   return parts.suffix === null ? resolve(msg("now", { $context: "relative time" })) : parts.value;
+}
+
+function PendingSyncLabel() {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span />}>
+        <T>Pending</T>
+      </TooltipTrigger>
+      <TooltipPopup side="top">
+        <T>Waiting to sync with its environment</T>
+      </TooltipPopup>
+    </Tooltip>
+  );
 }
 
 // Subscribes to the minute tick itself, so only the label re-renders each
@@ -839,6 +859,14 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
   const threadRef = scopeThreadRef(thread.environmentId, thread.id);
   const threadKey = scopedThreadKey(threadRef);
   const canOperateThread = useEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope);
+  const canTriageThread = !useEnvironmentScopeDenied(
+    thread.environmentId,
+    AuthOrchestrationOperateScope,
+  );
+  const pendingSync = useAtomValue(
+    threadEnvironment.pendingSyncAtom(thread.environmentId),
+    (threads) => threads.has(thread.id),
+  );
   const { leaseLiveStatus, rowRef: leaseRowRef } = useSidebarRowSubscriptionLease(props.isActive);
   const { revealRef } = props;
   const rowRef = (row: HTMLElement | null) => {
@@ -976,6 +1004,7 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
     />
   );
 
+  const intentPrefetch = useThreadIntentPrefetch(threadRef);
   const handleClick = (event: ReactMouseEvent) => {
     onThreadClick(event, threadRef);
   };
@@ -1082,7 +1111,7 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
     setSnoozeGateClock({ thread, now: new Date(snoozeGateOpensAt).toISOString() });
   }
   const showSnoozeButton =
-    canOperateThread && props.snoozeSupported && canSnooze(thread, { now: snoozeGateNow });
+    canTriageThread && props.snoozeSupported && canSnooze(thread, { now: snoozeGateNow });
   // Closing here, not just masking, keeps the menu from reopening when the button returns.
   if (snoozeMenuOpenRaw && !showSnoozeButton) setSnoozeMenuOpen(false);
   const snoozeMenuOpen = snoozeMenuOpenRaw && showSnoozeButton;
@@ -1155,7 +1184,7 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
 
   const accessibility = resolveSidebarRowAccessibility({
     title: thread.title,
-    statusLabel: topStatusLabel,
+    statusLabel: pendingSync ? gt("Pending") : topStatusLabel,
     projectDisplayName: props.projectDisplayName,
     isActive: props.isActive,
   });
@@ -1254,7 +1283,6 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
     leaseLiveStatus ? thread.issues : undefined,
   );
   const issueStatus = issueState === null ? null : issueStatePresentation(issueState);
-  const IssueIcon = issueStatus?.Icon ?? IssueGlyph.issue;
   const issueLabel =
     issueCount === 1 && firstIssue
       ? issueStatus
@@ -1268,43 +1296,32 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
           count: issueCount,
         });
   const issueBadge = firstIssue ? (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <InlineButton
-            tone="muted"
-            aria-label={issueLabel}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              openLinkedItems();
-            }}
-          />
-        }
-      >
-        <IssueIcon aria-hidden className={cn("size-3 shrink-0", issueStatus?.toneClassName)} />
-        <span className="max-w-16 truncate text-meta text-secondary-label tabular-nums">
-          {issueCount === 1 ? firstIssue.displayKey : issueCount}
-        </span>
-      </TooltipTrigger>
-      <TooltipPopup
-        side="top"
-        sideOffset={0}
-        variant="popover"
-        className="pointer-events-auto w-80 max-w-[calc(100vw-2rem)] text-left whitespace-normal"
-        onContextMenu={(event) => event.stopPropagation()}
-      >
-        <div className="-mx-1 max-h-[calc(var(--available-height)-0.5rem-2px)] overflow-y-auto overscroll-contain">
-          <ThreadDetailsIssueRows
-            links={thread.issues ?? []}
-            threadRef={threadRef}
-            variant="mini"
-            mountScope="sidebar-tooltip"
-            openWith={whenThreadShown}
-          />
-        </div>
-      </TooltipPopup>
-    </Tooltip>
+    <ThreadLinkBadge
+      control={
+        <InlineButton
+          tone="muted"
+          aria-label={issueLabel}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            openLinkedItems();
+          }}
+        />
+      }
+      appearance="number"
+      Icon={issueStatus?.Icon ?? IssueGlyph.issue}
+      toneClassName={issueStatus?.toneClassName}
+      textClassName="text-secondary-label"
+      text={issueCount === 1 ? firstIssue.displayKey.replace(/^#/, "") : issueCount}
+    >
+      <ThreadDetailsIssueRows
+        links={thread.issues ?? []}
+        threadRef={threadRef}
+        variant="mini"
+        mountScope="sidebar-tooltip"
+        openWith={whenThreadShown}
+      />
+    </ThreadLinkBadge>
   ) : null;
   const terminalStatusIcon = (
     <ThreadTerminalStatusButton
@@ -1458,6 +1475,9 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
                 onClick={handleClick}
                 onAuxClick={handleAuxClick}
                 onMouseDown={handleMouseDown}
+                onPointerEnter={intentPrefetch.onPointerEnter}
+                onPointerLeave={intentPrefetch.onPointerLeave}
+                onPointerDown={intentPrefetch.onPointerDown}
                 onDoubleClick={handleDoubleClick}
                 onKeyDown={handleKeyDown}
                 onContextMenu={handleContextMenu}
@@ -1510,7 +1530,11 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
                           : "group-any-hover/sidebar-row:opacity-0"),
                     )}
                   >
-                    {variantAction === "unsnooze" && props.snoozeWakeLabelText !== null ? (
+                    {pendingSync ? (
+                      <span className="text-meta font-normal">
+                        <PendingSyncLabel />
+                      </span>
+                    ) : variantAction === "unsnooze" && props.snoozeWakeLabelText !== null ? (
                       <span className="inline-flex items-center gap-1 text-meta font-normal text-info-foreground">
                         <AlarmClockIcon aria-hidden className="size-3 shrink-0" />
                         <T>
@@ -1660,6 +1684,9 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
               onClick={handleClick}
               onAuxClick={handleAuxClick}
               onMouseDown={handleMouseDown}
+              onPointerEnter={intentPrefetch.onPointerEnter}
+              onPointerLeave={intentPrefetch.onPointerLeave}
+              onPointerDown={intentPrefetch.onPointerDown}
               onDoubleClick={handleDoubleClick}
               onKeyDown={handleKeyDown}
               onContextMenu={handleContextMenu}
@@ -1699,7 +1726,9 @@ export const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThr
                       snoozeMenuOpen && "pointer-events-none opacity-0",
                     )}
                   >
-                    {topStatus === null ? (
+                    {pendingSync ? (
+                      <PendingSyncLabel />
+                    ) : topStatus === null ? (
                       <RelativeTimeLabel timestamp={resolveThreadActivityTimestamp(thread)} />
                     ) : isWokeStatus ? (
                       <SidebarWokeLabel onDismiss={handleAcknowledgeWokeClick} />
@@ -2002,7 +2031,7 @@ export const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props
                   settled={props.isSettled}
                 />
               </span>
-              <span className="w-8 shrink-0 text-right text-meta text-dim-foreground tabular-nums">
+              <span className="min-w-8 shrink-0 text-right text-meta text-dim-foreground tabular-nums">
                 <RelativeTimeLabel timestamp={resolveThreadActivityTimestamp(thread)} />
               </span>
             </span>
