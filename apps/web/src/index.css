@@ -428,25 +428,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
-/* redesign: shell */
-/* Over the channel art the notch shapes repaint the art, fixed to the
-   viewport so they line up with ChromeChannelArt. The same curve masks apply. */
-@media (width >= 48rem) {
-  .black-chrome
-    [data-chrome-art]
-    [data-slot="sidebar"][data-variant="inset"]
-    ~ [data-slot="sidebar-inset"] {
-    & [data-pane-notch]::before,
-    & [data-pane-notches-merged]::before,
-    & [data-pane-notch]::after,
-    & [data-pane-notch-corner] {
-      background: var(--chrome-art-paint);
-      background-attachment: fixed;
-      background-origin: var(--chrome-art-origin, padding-box);
-      background-blend-mode: var(--chrome-art-blend, normal);
-    }
-  }
-}
 
 /* Where the strip's edge cuts a pane, the visible piece gets the pane's
    rounded corners (PaneCuts in SurfaceHost.tsx). Each cut is a chrome corner,
@@ -663,23 +644,12 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
-/* Chromium paints a fixed background as scrolling while an ancestor is
-   transformed and keeps that paint after the transform ends, so the art
-   shows sized to the surface. playMotion (motion/animation.ts) toggles this
-   attribute on the moved element when it lands; the background-origin flip
-   is invisible on these borderless surfaces but makes them repaint. */
-[data-chrome-art-repaint] {
-  --chrome-art-origin: border-box;
-}
 
-/* Over the channel art the cuts repaint the art, as the notch does. */
-[data-chrome-art] [data-pane-cut]::before,
-[data-chrome-art] [data-pane-cut] > span > span {
-  background: var(--chrome-art-paint);
-  background-attachment: fixed;
-  background-origin: var(--chrome-art-origin, padding-box);
-  background-blend-mode: var(--chrome-art-blend, normal);
-}
+/* Over the channel art, the pane bar, its corners and the pane cuts keep the
+   chrome's flat color instead of repainting the art with a fixed background:
+   inside the scrolled layout strip Chromium leaves those fixed backgrounds
+   painted at a stale offset after splits and tab switches, so the sky's
+   bright horizon showed squeezed into the tab bar. */
 
 /* PaneNotch lays out the tab with this tail as its end padding. */
 [data-pane-notch] {
@@ -2019,7 +1989,6 @@ html[data-theme-id]:not([data-theme-id=""]):not(.black-chrome) {
   [data-chrome-art] [data-overview-zoom] > [data-slot="sidebar-inner"] {
     background: var(--chrome-art-paint);
     background-attachment: fixed;
-    background-origin: var(--chrome-art-origin, padding-box);
     background-blend-mode: var(--chrome-art-blend, normal);
   }
 }
@@ -7683,18 +7652,6 @@ body {
     }
   }
 
-  :root:not(.black-chrome)
-    [data-chrome-art]
-    [data-slot="sidebar"][data-variant="inset"]
-    ~ [data-slot="sidebar-inset"] {
-    & [data-pane-notch=""]::before,
-    & [data-pane-bar-corner] {
-      background: var(--chrome-art-paint);
-      background-attachment: fixed;
-      background-origin: var(--chrome-art-origin, padding-box);
-      background-blend-mode: var(--chrome-art-blend, normal);
-    }
-  }
 
   @media (prefers-reduced-motion: reduce) {
     :root:not(.black-chrome) [data-pane-notch=""] [data-pane-join] * {
