@@ -30,10 +30,11 @@ export class DesktopUpdatePolicy extends Context.Service<DesktopUpdatePolicy, Up
 ) {}
 
 export const unmanagedUpdatePolicy: UpdatePolicy = {
-  mode: "auto",
+  // Local redesign build: an official update would replace it, so updates stay off.
+  mode: "off",
   feedUrl: undefined,
   allowNightly: true,
-  message: null,
+  message: "Updates are off in this local redesign build. Rebuild it from ~/t3code-redesign.",
 };
 
 function resolveUpdatePolicy(document: ManagedPolicyDocument | undefined): UpdatePolicy {

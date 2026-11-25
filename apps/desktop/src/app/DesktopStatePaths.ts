@@ -16,7 +16,8 @@ export function resolveDesktopBaseDir(input: {
   readonly t3Home: Option.Option<string>;
 }): string {
   return Option.getOrElse(normalizeConfiguredBaseDir(input.t3Home), () =>
-    input.joinPath(input.homeDirectory, ".t3"),
+    // Local redesign build: its own T3 home, apart from the installed T3 Code.
+    input.joinPath(input.homeDirectory, ".t3-redesign"),
   );
 }
 
