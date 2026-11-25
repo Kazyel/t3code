@@ -290,12 +290,18 @@ function normalizeThemeColor(value: string | null | undefined): string | null {
 }
 
 // The color at the top edge of the page: the full-bleed content pane on narrow
-// layouts, otherwise the window chrome the inset pane sits on.
+// layouts, otherwise the window chrome the inset pane sits on. Under a desktop
+// title bar overlay the inset pane reaches the top edge but still leaves chrome
+// at its sides, so only a pane with no top or side margin counts as full-bleed.
 function resolveBrowserChromeSurfaceColor(rootStyles: CSSStyleDeclaration): string {
   const pane = document.querySelector<HTMLElement>("main[data-slot='sidebar-inset']");
   if (pane) {
     const paneStyles = getComputedStyle(pane);
-    return paneStyles.marginTop === "0px"
+    const fullBleed =
+      paneStyles.marginTop === "0px" &&
+      paneStyles.marginLeft === "0px" &&
+      paneStyles.marginRight === "0px";
+    return fullBleed
       ? paneStyles.backgroundColor
       : rootStyles.getPropertyValue("--app-chrome-background");
   }

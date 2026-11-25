@@ -7369,8 +7369,9 @@ body {
       --foreground: var(--pane-bar-fg);
     }
 
-    /* The bar's own controls follow the tabs down. */
-    & [data-workspace-titlebar-controls] {
+    /* The bar's own controls follow the tabs down, except beside the desktop
+       caption buttons (.wco), whose row they share. */
+    & [data-workspace-titlebar-controls]:not(.wco *) {
       translate: 0 var(--pane-join-shift);
     }
 
