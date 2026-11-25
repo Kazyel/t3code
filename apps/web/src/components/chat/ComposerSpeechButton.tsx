@@ -16,7 +16,7 @@ import { readLocalApi } from "~/localApi";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 
 type DownloadProgress = { downloaded: number; total: number } | null;
 
@@ -216,61 +216,62 @@ export function ComposerSpeechButton(props: {
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            inPill ? (
-              <button
-                type="button"
-                {...accessibilityProps}
-                aria-pressed={isActive}
-                data-voice-phase={phase}
-                disabled={disabled}
-                onPointerDown={keepFocus}
-                onClick={onClick}
-                onContextMenu={(event) => void onContextMenu(event)}
-                onKeyDown={onKeyDown}
-                className={
-                  unavailable
-                    ? COMPOSER_PILL_SLOT_BUTTON_UNAVAILABLE_CLASS_NAME
-                    : isActive
-                      ? COMPOSER_PILL_SLOT_BUTTON_ACTIVE_CLASS_NAME
-                      : COMPOSER_PILL_SLOT_BUTTON_CLASS_NAME
-                }
-              />
-            ) : (
-              <Button
-                type="button"
-                size={props.size === "compact" ? "icon-xs" : "icon-sm"}
-                variant={isActive ? "secondary" : "ghost"}
-                {...accessibilityProps}
-                aria-pressed={isActive}
-                data-voice-phase={phase}
-                disabled={disabled}
-                onPointerDown={keepFocus}
-                onClick={onClick}
-                onContextMenu={(event) => void onContextMenu(event)}
-                onKeyDown={onKeyDown}
-                className="shrink-0"
-              />
-            )
-          }
-        >
-          {glyph}
-        </TooltipTrigger>
-        <TooltipPopup side="top">
-          {isError ? <div>{errorMessage}</div> : null}
-          <div>
-            {unavailable ?? label}
-            {showsShortcut && props.shortcutLabel ? ` (${props.shortcutLabel})` : ""}
-          </div>
-          {phase !== "idle" ? (
+      <SharedTooltipTrigger
+        render={
+          inPill ? (
+            <button
+              type="button"
+              {...accessibilityProps}
+              aria-pressed={isActive}
+              data-voice-phase={phase}
+              disabled={disabled}
+              onPointerDown={keepFocus}
+              onClick={onClick}
+              onContextMenu={(event) => void onContextMenu(event)}
+              onKeyDown={onKeyDown}
+              className={
+                unavailable
+                  ? COMPOSER_PILL_SLOT_BUTTON_UNAVAILABLE_CLASS_NAME
+                  : isActive
+                    ? COMPOSER_PILL_SLOT_BUTTON_ACTIVE_CLASS_NAME
+                    : COMPOSER_PILL_SLOT_BUTTON_CLASS_NAME
+              }
+            />
+          ) : (
+            <Button
+              type="button"
+              size={props.size === "compact" ? "icon-xs" : "icon-sm"}
+              variant={isActive ? "secondary" : "ghost"}
+              {...accessibilityProps}
+              aria-pressed={isActive}
+              data-voice-phase={phase}
+              disabled={disabled}
+              onPointerDown={keepFocus}
+              onClick={onClick}
+              onContextMenu={(event) => void onContextMenu(event)}
+              onKeyDown={onKeyDown}
+              className="shrink-0"
+            />
+          )
+        }
+        label={
+          <>
+            {isError ? <div>{errorMessage}</div> : null}
             <div>
-              {isError ? gt("Dismiss ({shortcut})", { shortcut: "Esc" }) : `${cancelLabel} (Esc)`}
+              {unavailable ?? label}
+              {showsShortcut && props.shortcutLabel ? ` (${props.shortcutLabel})` : ""}
             </div>
-          ) : null}
-        </TooltipPopup>
-      </Tooltip>
+            {phase !== "idle" ? (
+              <div>
+                {isError ? gt("Dismiss ({shortcut})", { shortcut: "Esc" }) : `${cancelLabel} (Esc)`}
+              </div>
+            ) : null}
+          </>
+        }
+        side="top"
+      >
+        {glyph}
+      </SharedTooltipTrigger>
       {/* The button's name says what a click does; this says what is happening. */}
       <span role="status" className="sr-only">
         {isError

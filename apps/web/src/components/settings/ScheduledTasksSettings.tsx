@@ -151,7 +151,6 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import { stackedThreadToast, toastManager } from "../ui/toast";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   SettingsEmptyState,
   SettingsEmptyTile,
@@ -161,6 +160,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "./settingsLayout";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 
@@ -601,6 +601,9 @@ function ScheduledTaskEnvironmentList({
 
   const loaded = states.filter((state) => state.connected && state.error === null && state.tasks);
   const populated = loaded.filter((state) => state.tasks && state.tasks.length > 0);
+  const loading = states.some((state) => state.connected && state.error === null && !state.tasks);
+  // Until one machine has tasks to show, rows stand in for the list instead of a status line.
+  const placeholder = loading && populated.length === 0;
   const summaries: Record<string, string[]> = {
     "Not connected:": [],
     "Loading scheduled tasks on": [],
@@ -616,7 +619,7 @@ function ScheduledTaskEnvironmentList({
     } else if (error !== null) {
       summaries["Could not load scheduled tasks:"]!.push(`${label}: ${error}`);
     } else if (!tasks) {
-      summaries["Loading scheduled tasks on"]!.push(label);
+      if (!placeholder) summaries["Loading scheduled tasks on"]!.push(label);
     } else if (tasks.length === 0 && populated.length > 0) {
       summaries["No tasks on"]!.push(label);
     }
@@ -679,7 +682,10 @@ function ScheduledTaskEnvironmentList({
             role="status"
           />
         ) : null}
-        {populated.length === 0 && loaded.length > 0 ? (
+        {placeholder ? (
+          <SettingsLoadingRows label={gt("Loading scheduled tasks…")} count={2} />
+        ) : null}
+        {populated.length === 0 && loaded.length > 0 && !loading ? (
           <SettingsRow
             title={gt("No scheduled tasks")}
             description={gt("No tasks match this environment and project selection.")}
@@ -691,19 +697,18 @@ function ScheduledTaskEnvironmentList({
             environments: entries.join(", "),
           });
           return (
-            <Tooltip key={label}>
-              <TooltipTrigger
-                render={
-                  <p
-                    className="truncate px-3 py-2.5 text-caption text-muted-foreground sm:px-4"
-                    role="status"
-                  />
-                }
-              >
-                {summary}
-              </TooltipTrigger>
-              <TooltipPopup>{summary}</TooltipPopup>
-            </Tooltip>
+            <SharedTooltipTrigger
+              key={label}
+              render={
+                <p
+                  className="truncate px-3 py-2.5 text-caption text-muted-foreground sm:px-4"
+                  role="status"
+                />
+              }
+              label={summary}
+            >
+              {summary}
+            </SharedTooltipTrigger>
           );
         })}
       </SettingsSection>

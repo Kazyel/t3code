@@ -163,6 +163,13 @@ export function FleetDetails(props: FleetDetailsProps) {
       role="group"
       aria-label={gt("Details")}
       className="text-meta outline-none"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || selection === null || event.target !== panel.current) return;
+        // Base UI's dialog closes on a document Esc listener.
+        event.stopPropagation();
+        event.preventDefault();
+        onSelect(null);
+      }}
     >
       {connectProblem ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 not-last:border-b not-last:border-divider sm:px-4">

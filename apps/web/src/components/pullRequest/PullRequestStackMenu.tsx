@@ -1,4 +1,4 @@
-import { Tooltip, TooltipTrigger, TooltipPopup } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 import type {
   EnvironmentId,
   PullRequestRef,
@@ -234,32 +234,28 @@ export function PullRequestStackMenu({
     <>
       {display !== "merge-button" ? (
         <Menu open={open} onOpenChange={setOpen}>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <MenuTrigger
-                  render={
-                    <Button
-                      variant="success-outline"
-                      size="chip"
-                      aria-label={gt("Stack {number}, layer {position} of {size}", {
-                        number: stack.number,
-                        position,
-                        size: stack.layers.length,
-                      })}
-                    />
-                  }
-                >
-                  <PullRequestGlyph.stack aria-hidden className="size-3.5" /> {position}/
-                  {stack.layers.length}
-                  <ChevronDownIcon aria-hidden className="size-3" />
-                  {onRetry ? (
-                    <TriangleAlertIcon aria-hidden className="size-3 text-warning" />
-                  ) : null}
-                </MenuTrigger>
-              }
-            />
-            <TooltipPopup>
+          <SharedTooltipTrigger
+            render={
+              <MenuTrigger
+                render={
+                  <Button
+                    variant="success-outline"
+                    size="chip"
+                    aria-label={gt("Stack {number}, layer {position} of {size}", {
+                      number: stack.number,
+                      position,
+                      size: stack.layers.length,
+                    })}
+                  />
+                }
+              >
+                <PullRequestGlyph.stack aria-hidden className="size-3.5" /> {position}/
+                {stack.layers.length}
+                <ChevronDownIcon aria-hidden className="size-3" />
+                {onRetry ? <TriangleAlertIcon aria-hidden className="size-3 text-warning" /> : null}
+              </MenuTrigger>
+            }
+            label={
               <span className="flex flex-col gap-0.5">
                 <span>
                   <T>
@@ -269,8 +265,8 @@ export function PullRequestStackMenu({
                 </span>
                 {notice ? <span>{notice}</span> : null}
               </span>
-            </TooltipPopup>
-          </Tooltip>
+            }
+          />
           <MenuPopup align="start" className="w-[437px] max-w-[calc(100vw-2rem)]">
             <MenuGroup>
               <PullRequestStackHeader
@@ -368,35 +364,33 @@ export function PullRequestStackMenu({
       !autoMergeArmed &&
       conflictsWith === null &&
       selectedLayer?.state === "open" ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span className={display === "merge-button" ? "flex w-full" : "inline-flex"}>
-                <Button
-                  variant="default"
-                  className={display === "merge-button" ? "flex-1" : undefined}
-                  size={display === "merge-button" ? "sm" : "xs"}
-                  disabled={mergeDisabled && !stale}
-                  aria-disabled={mergeDisabled || undefined}
-                  aria-description={stale ? staleReason : undefined}
-                  onClick={
-                    mergeDisabled
-                      ? undefined
-                      : () => setConfirmation(leadsWithAutoMerge ? "enable-auto-merge" : "merge")
-                  }
-                >
-                  {leadsWithAutoMerge ? (
-                    <ClockIcon aria-hidden className="size-3.5" />
-                  ) : (
-                    <PullRequestGlyph.merged aria-hidden className="size-3.5" />
-                  )}
-                  {leadsWithAutoMerge ? <T>Auto-merge stack</T> : <T>Merge stack</T>}
-                </Button>
-              </span>
-            }
-          />
-          <TooltipPopup>
-            {stale
+        <SharedTooltipTrigger
+          render={
+            <span className={display === "merge-button" ? "flex w-full" : "inline-flex"}>
+              <Button
+                variant="default"
+                className={display === "merge-button" ? "flex-1" : undefined}
+                size={display === "merge-button" ? "sm" : "xs"}
+                disabled={mergeDisabled && !stale}
+                aria-disabled={mergeDisabled || undefined}
+                aria-description={stale ? staleReason : undefined}
+                onClick={
+                  mergeDisabled
+                    ? undefined
+                    : () => setConfirmation(leadsWithAutoMerge ? "enable-auto-merge" : "merge")
+                }
+              >
+                {leadsWithAutoMerge ? (
+                  <ClockIcon aria-hidden className="size-3.5" />
+                ) : (
+                  <PullRequestGlyph.merged aria-hidden className="size-3.5" />
+                )}
+                {leadsWithAutoMerge ? <T>Auto-merge stack</T> : <T>Merge stack</T>}
+              </Button>
+            </span>
+          }
+          label={
+            stale
               ? staleReason
               : gt(
                   "{count, plural, one {Merge stack through '#'{number} into {base} ({count} {term, select, mr {merge request} cr {change request} other {pull request}})} other {Merge stack through '#'{number} into {base} ({count} {term, select, mr {merge requests} cr {change requests} other {pull requests}})}}",
@@ -406,9 +400,9 @@ export function PullRequestStackMenu({
                     base: stack.base,
                     term: changeRequestTermKind(terminology),
                   },
-                )}
-          </TooltipPopup>
-        </Tooltip>
+                )
+          }
+        />
       ) : null}
       <Dialog
         open={confirmation !== null}

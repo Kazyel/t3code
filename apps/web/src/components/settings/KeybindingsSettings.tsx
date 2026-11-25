@@ -99,6 +99,7 @@ import {
 } from "./settingsLayout";
 import { keybindingSearchAnchorId, useSearchableSetting } from "./settingsSearch";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 import { useAtomCommand } from "../../state/use-atom-command";
 
 function KeybindingPill({
@@ -214,23 +215,21 @@ function WarningTooltipIcon({
   children: ReactNode;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            tabIndex={focusable ? 0 : undefined}
-            aria-label={label}
-            className={cn(
-              "inline-flex size-5 shrink-0 items-center justify-center rounded-kbd text-warning-foreground outline-none transition-colors hover:bg-warning/10 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-warning/25",
-              className,
-            )}
-          />
-        }
-      >
-        <TriangleAlertIcon className="size-3.5" />
-      </TooltipTrigger>
-      <TooltipPopup side="top">{children}</TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <span
+          tabIndex={focusable ? 0 : undefined}
+          aria-label={label}
+          className={cn(
+            "inline-flex size-5 shrink-0 items-center justify-center rounded-kbd text-warning-foreground outline-none transition-colors hover:bg-warning/10 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-warning/25",
+            className,
+          )}
+        />
+      }
+      label={children}
+    >
+      <TriangleAlertIcon className="size-3.5" />
+    </SharedTooltipTrigger>
   );
 }
 
@@ -1519,25 +1518,21 @@ function NewKeybindingCancelIcon({
 }) {
   const gt = useGT();
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost-muted"
-            size="icon-sm"
-            disabled={isSaving}
-            aria-label={gt("Cancel new keybinding")}
-            onClick={onCancel}
-          />
-        }
-      >
-        <XIcon className="size-3.5" />
-      </TooltipTrigger>
-      <TooltipPopup side="top">
-        <T>Cancel</T>
-      </TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <Button
+          type="button"
+          variant="ghost-muted"
+          size="icon-sm"
+          disabled={isSaving}
+          aria-label={gt("Cancel new keybinding")}
+          onClick={onCancel}
+        />
+      }
+      label={<T>Cancel</T>}
+    >
+      <XIcon className="size-3.5" />
+    </SharedTooltipTrigger>
   );
 }
 

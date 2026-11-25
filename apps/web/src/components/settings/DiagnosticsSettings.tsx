@@ -43,7 +43,7 @@ import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 import { toastManager } from "../ui/toast";
 import { formatDiagnosticsDuration } from "./DiagnosticsSettings.logic";
 import { ExpandableText } from "./ExpandableText";
@@ -85,20 +85,18 @@ function isStaleProcessSignalMessage(message: string | undefined): boolean {
 
 function StatTooltip({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            className="inline-flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-dim-foreground outline-none hover:text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-ring"
-            aria-label={`${label} details`}
-          >
-            <InfoIcon className="size-3" />
-          </button>
-        }
-      />
-      <TooltipPopup side="top">{children}</TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <button
+          type="button"
+          className="inline-flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-dim-foreground outline-none hover:text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-ring"
+          aria-label={`${label} details`}
+        >
+          <InfoIcon className="size-3" />
+        </button>
+      }
+      label={children}
+    />
   );
 }
 
@@ -262,33 +260,26 @@ function TraceIdCell({ traceId }: { traceId: string }) {
 
   return (
     <div className="flex w-full min-w-0 max-w-full items-center gap-2">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <span className="min-w-0 truncate font-mono text-caption">
-              {shortenTraceId(traceId)}
-            </span>
-          }
-        />
-        <TooltipPopup side="top" variant="code">
-          {traceId}
-        </TooltipPopup>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              size="icon-micro"
-              variant="ghost-muted"
-              aria-label={copied ? gt("Copied trace ID") : gt("Copy trace ID")}
-              onClick={() => copyToClipboard(traceId)}
-            >
-              <CopyIcon className="size-3" />
-            </Button>
-          }
-        />
-        <TooltipPopup side="top">{copied ? gt("Copied") : gt("Copy full trace ID")}</TooltipPopup>
-      </Tooltip>
+      <SharedTooltipTrigger
+        render={
+          <span className="min-w-0 truncate font-mono text-caption">{shortenTraceId(traceId)}</span>
+        }
+        variant="code"
+        label={traceId}
+      />
+      <SharedTooltipTrigger
+        render={
+          <Button
+            size="icon-micro"
+            variant="ghost-muted"
+            aria-label={copied ? gt("Copied trace ID") : gt("Copy trace ID")}
+            onClick={() => copyToClipboard(traceId)}
+          >
+            <CopyIcon className="size-3" />
+          </Button>
+        }
+        label={copied ? gt("Copied") : gt("Copy full trace ID")}
+      />
     </div>
   );
 }
@@ -349,15 +340,16 @@ function ProcessNameCell({
       <span className="size-1.5 shrink-0 rounded-full bg-success/80" />
       <div className="min-w-0">
         <div className="truncate text-label text-strong-foreground">{name}</div>
-        <Tooltip>
-          <TooltipTrigger render={<RowDetail>{gt("PID {pid}", { pid: process.pid })}</RowDetail>} />
-          <TooltipPopup side="top" variant="code">
+        <SharedTooltipTrigger
+          render={<RowDetail>{gt("PID {pid}", { pid: process.pid })}</RowDetail>}
+          variant="code"
+          label={
             <span className="grid gap-1">
               <span>{formatProcessType(process, m)}</span>
               <span>{process.command}</span>
             </span>
-          </TooltipPopup>
-        </Tooltip>
+          }
+        />
       </div>
     </div>
   );
@@ -527,15 +519,16 @@ function ResourceHistoryProcessNameCell({
       />
       <div className="min-w-0">
         <div className="truncate text-label text-strong-foreground">{name}</div>
-        <Tooltip>
-          <TooltipTrigger render={<RowDetail>{gt("PID {pid}", { pid: process.pid })}</RowDetail>} />
-          <TooltipPopup side="top" variant="code">
+        <SharedTooltipTrigger
+          render={<RowDetail>{gt("PID {pid}", { pid: process.pid })}</RowDetail>}
+          variant="code"
+          label={
             <span className="grid gap-1">
               <span>{gt("Now {percent}%", { percent: process.currentCpuPercent.toFixed(1) })}</span>
               <span>{process.command}</span>
             </span>
-          </TooltipPopup>
-        </Tooltip>
+          }
+        />
       </div>
     </div>
   );
@@ -560,36 +553,33 @@ function ProcessResourceHistoryChart({
           const peakHeight = Math.max(2, (bucket.maxCpuPercent / maxCpuPercent) * 100);
           const averageHeight = Math.max(2, (bucket.avgCpuPercent / maxCpuPercent) * 100);
           return (
-            <Tooltip key={DateTime.formatIso(bucket.startedAt)}>
-              <TooltipTrigger
-                render={
-                  <div className="flex h-full min-w-1 flex-1 items-end">
-                    <div className="relative h-full w-full">
-                      <span className="sr-only">
-                        {gt("Average CPU {average}%, peak CPU {peak}%", {
-                          average: bucket.avgCpuPercent.toFixed(1),
-                          peak: bucket.maxCpuPercent.toFixed(1),
-                        })}
-                      </span>
-                      <div
-                        className="absolute inset-x-0 bottom-0 rounded-t-sm bg-foreground/15 transition-colors"
-                        style={{ height: `${peakHeight}%` }}
-                      />
-                      <div
-                        className="absolute inset-x-0 bottom-0 rounded-t-sm bg-foreground/60 transition-colors"
-                        style={{ height: `${averageHeight}%` }}
-                      />
-                    </div>
+            <SharedTooltipTrigger
+              key={DateTime.formatIso(bucket.startedAt)}
+              render={
+                <div className="flex h-full min-w-1 flex-1 items-end">
+                  <div className="relative h-full w-full">
+                    <span className="sr-only">
+                      {gt("Average CPU {average}%, peak CPU {peak}%", {
+                        average: bucket.avgCpuPercent.toFixed(1),
+                        peak: bucket.maxCpuPercent.toFixed(1),
+                      })}
+                    </span>
+                    <div
+                      className="absolute inset-x-0 bottom-0 rounded-t-sm bg-foreground/15 transition-colors"
+                      style={{ height: `${peakHeight}%` }}
+                    />
+                    <div
+                      className="absolute inset-x-0 bottom-0 rounded-t-sm bg-foreground/60 transition-colors"
+                      style={{ height: `${averageHeight}%` }}
+                    />
                   </div>
-                }
-              />
-              <TooltipPopup side="top">
-                {gt("Avg {average}%, peak {peak}%", {
-                  average: bucket.avgCpuPercent.toFixed(1),
-                  peak: bucket.maxCpuPercent.toFixed(1),
-                })}
-              </TooltipPopup>
-            </Tooltip>
+                </div>
+              }
+              label={gt("Avg {average}%, peak {peak}%", {
+                average: bucket.avgCpuPercent.toFixed(1),
+                peak: bucket.maxCpuPercent.toFixed(1),
+              })}
+            />
           );
         })}
       </div>
@@ -762,22 +752,20 @@ function DiagnosticsRefreshButton({
   onClick: () => void;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            size="icon-xs"
-            variant="ghost-muted"
-            disabled={isPending}
-            onClick={onClick}
-            aria-label={label}
-          >
-            <RefreshIcon refreshing={isPending} />
-          </Button>
-        }
-      />
-      <TooltipPopup side="top">{label}</TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <Button
+          size="icon-xs"
+          variant="ghost-muted"
+          disabled={isPending}
+          onClick={onClick}
+          aria-label={label}
+        >
+          <RefreshIcon refreshing={isPending} />
+        </Button>
+      }
+      label={label}
+    />
   );
 }
 
@@ -1232,16 +1220,16 @@ function DiagnosticsSettingsBody() {
                     <SpanName name={failure.name} />
                   </div>
                   <RowDetail>
-                    <Tooltip>
-                      <TooltipTrigger render={<span tabIndex={0} />}>
-                        {formatDiagnosticsDuration(failure.durationMs)}
-                      </TooltipTrigger>
-                      <TooltipPopup side="top">
+                    <SharedTooltipTrigger
+                      render={<span tabIndex={0} />}
+                      label={
                         <T>
                           Ended <RelativeTimeNoWrap value={failure.endedAt} />
                         </T>
-                      </TooltipPopup>
-                    </Tooltip>
+                      }
+                    >
+                      {formatDiagnosticsDuration(failure.durationMs)}
+                    </SharedTooltipTrigger>
                   </RowDetail>
                 </td>
                 <td className="py-3 pr-4 pl-3 align-top break-words text-muted-foreground sm:pr-5">

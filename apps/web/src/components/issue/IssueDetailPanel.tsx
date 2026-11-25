@@ -83,6 +83,7 @@ import {
 import { IssueCommentComposer } from "./IssueCommentComposer";
 import { IssueDetailGhost } from "./IssueDetailGhost";
 import { IssueThreadLinks } from "./IssueThreadLinks";
+import { WorkflowRunsAbout } from "../workflows/WorkflowRunsAbout";
 import { ReactionBar } from "../pullRequest/PullRequestReactions";
 import { PullRequestsUnavailableState } from "../pullRequest/PullRequestsUnavailableState";
 import { IssueGlyph, issueTrackerPresentation, issueStatePresentation } from "./issuePresentation";
@@ -881,6 +882,13 @@ export function IssueDetailPanel({
                 : null,
             ]}
           />
+          <WorkflowRunsAbout
+            environmentId={environmentId}
+            item={{
+              subject: detail.url,
+              issue: { ...reference, host: reference.host ?? detail.host },
+            }}
+          />
         </PullRequestSection>
 
         {detail.linkedPullRequests.length > 0 ? (
@@ -944,6 +952,7 @@ export function IssueDetailPanel({
                       profileUrl={profileUrl(item.comment.author)}
                       createdAt={item.comment.createdAt}
                       url={item.comment.url}
+                      threadRef={threadRef}
                     />
                   }
                   reactions={

@@ -118,6 +118,7 @@ import { PullRequestResolveThreadButton } from "./PullRequestResolveThreadButton
 import { PullRequestConversationGhost } from "./PullRequestGhosts";
 import { sectionCollapseAnchorScrollTop } from "./pullRequestSummaryScroll.logic";
 import { changeRequestTermKind } from "./changeRequestTerm";
+import { WorkflowRunsAbout } from "../workflows/WorkflowRunsAbout";
 
 /** Who wrote a comment and when, the time linking to it on the host. */
 export function WorkItemCommentIdentity({
@@ -125,16 +126,23 @@ export function WorkItemCommentIdentity({
   profileUrl,
   createdAt,
   url,
+  threadRef,
 }: {
   actor: PullRequestActor | null;
   profileUrl: string | null;
   createdAt: string;
   url: string | null;
+  threadRef: ScopedThreadRef | null;
 }) {
   return (
     <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1 text-meta">
-      <PullRequestActorLabel actor={actor} profileUrl={profileUrl} className="max-w-full" />
-      <PullRequestCommentTime createdAt={createdAt} url={url} />
+      <PullRequestActorLabel
+        actor={actor}
+        profileUrl={profileUrl}
+        threadRef={threadRef}
+        className="max-w-full"
+      />
+      <PullRequestCommentTime createdAt={createdAt} url={url} threadRef={threadRef} />
     </div>
   );
 }
@@ -142,9 +150,11 @@ export function WorkItemCommentIdentity({
 function CommentIdentity({
   comment,
   detail,
+  threadRef,
 }: {
   comment: PullRequestComment;
   detail: PullRequestDetailView;
+  threadRef: ScopedThreadRef | null;
 }) {
   const actor = comment.author;
   const profileUrl = actor
@@ -156,6 +166,7 @@ function CommentIdentity({
       profileUrl={profileUrl}
       createdAt={comment.createdAt}
       url={comment.url}
+      threadRef={threadRef}
     />
   );
 }
@@ -825,7 +836,7 @@ export const PullRequestSummaryTab = memo(function PullRequestSummaryTab({
         linkTarget={matchesLink(comment.url)}
         header={
           <>
-            <CommentIdentity comment={comment} detail={detail} />
+            <CommentIdentity comment={comment} detail={detail} threadRef={threadRef} />
             {outcome ? (
               <PullRequestReviewOutcomeBadge outcome={outcome} />
             ) : comment.reviewState ? (
@@ -1222,6 +1233,20 @@ export const PullRequestSummaryTab = memo(function PullRequestSummaryTab({
                   }
                 : null,
             ]}
+          />
+          <WorkflowRunsAbout
+            environmentId={environmentId}
+            item={{
+              subject: detail.url,
+              pullRequest: {
+                projectId: reference.projectId,
+                repository: reference.repository,
+                number: reference.number,
+                host:
+                  reference.host ??
+                  (URL.canParse(detail.url) ? new URL(detail.url).hostname : undefined),
+              },
+            }}
           />
         </PullRequestSection>
 

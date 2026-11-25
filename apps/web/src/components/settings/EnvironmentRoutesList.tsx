@@ -37,7 +37,7 @@ import type { EnvironmentPresentation } from "~/state/environments";
 import { usePreparedConnection } from "~/state/session";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { Button } from "../ui/button";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 
 export function EnvironmentRoutesList({
   environment,
@@ -193,16 +193,13 @@ function SortableRouteRow({
           ) : null}
         </p>
         {address !== null ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={<p tabIndex={0} className="truncate text-meta text-muted-foreground" />}
-            >
-              {address}
-            </TooltipTrigger>
-            <TooltipPopup side="top">
-              {isLearned(route) ? gt("Found automatically") : address}
-            </TooltipPopup>
-          </Tooltip>
+          <SharedTooltipTrigger
+            render={<p tabIndex={0} className="truncate text-meta text-muted-foreground" />}
+            label={isLearned(route) ? gt("Found automatically") : address}
+            side="top"
+          >
+            {address}
+          </SharedTooltipTrigger>
         ) : null}
         {refused && address !== null ? (
           <p className="text-meta text-muted-foreground">
@@ -222,24 +219,24 @@ function SortableRouteRow({
         <GripVerticalIcon className="size-3.5" />
       </Button>
       {removable ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost-muted"
-                size="icon-xs"
-                aria-label={gt("Remove {route} route", { route: label })}
-                onClick={onRemove}
-              />
-            }
-          >
-            <XIcon className="size-3" />
-          </TooltipTrigger>
-          <TooltipPopup side="top">
-            <T>Remove route</T>
-          </TooltipPopup>
-        </Tooltip>
+        <SharedTooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost-muted"
+              size="icon-xs"
+              aria-label={gt("Remove {route} route", { route: label })}
+              onClick={onRemove}
+            />
+          }
+          label={
+            <>
+              <T>Remove route</T>
+            </>
+          }
+        >
+          <XIcon className="size-3" />
+        </SharedTooltipTrigger>
       ) : null}
     </li>
   );

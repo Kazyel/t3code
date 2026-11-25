@@ -79,7 +79,6 @@ import { Group, GroupSeparator } from "../ui/group";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   buildFleetGraph,
   anchorFleetView,
@@ -142,6 +141,7 @@ import { LinkEnvironmentDialog, type LinkEnvironmentPrefill } from "./LinkedEnvi
 import { LinkSeveralEnvironmentsDialog } from "./LinkSeveralEnvironments";
 import { savedBackendStatus } from "./SavedEnvironmentRows";
 import { SettingsSearchTarget } from "./settingsLayout";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 
 type GT = ReturnType<typeof useGT>;
 type Messages = ReturnType<typeof useMessages>;
@@ -869,8 +869,11 @@ function FleetCanvas({
     if (event.key === "+" || event.key === "=") zoom(1.25);
     else if (event.key === "-") zoom(0.8);
     else if (event.key === "0") fit();
-    else if (event.key === "Escape") onSelect(null);
-    else return;
+    else if (event.key === "Escape" && selection !== null) {
+      // Base UI's dialog closes on a document Esc listener.
+      event.stopPropagation();
+      onSelect(null);
+    } else return;
     event.preventDefault();
   };
 
@@ -934,34 +937,30 @@ function FleetCanvas({
           </span>
         ) : null}
         {sources.length === 0 ? null : source !== undefined ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button size="sm" variant="secondary" onClick={() => onLinkSeveral(source.id)}>
-                  <LinkIcon />
-                  {gt("Link several…")}
-                </Button>
-              }
-            />
-            <TooltipPopup>{selectSeveral}</TooltipPopup>
-          </Tooltip>
+          <SharedTooltipTrigger
+            render={
+              <Button size="sm" variant="secondary" onClick={() => onLinkSeveral(source.id)}>
+                <LinkIcon />
+                {gt("Link several…")}
+              </Button>
+            }
+            label={selectSeveral}
+          />
         ) : (
           <Menu>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <MenuTrigger
-                    render={
-                      <Button size="sm" variant="secondary">
-                        <LinkIcon />
-                        {gt("Link several…")}
-                      </Button>
-                    }
-                  />
-                }
-              />
-              <TooltipPopup>{selectSeveral}</TooltipPopup>
-            </Tooltip>
+            <SharedTooltipTrigger
+              render={
+                <MenuTrigger
+                  render={
+                    <Button size="sm" variant="secondary">
+                      <LinkIcon />
+                      {gt("Link several…")}
+                    </Button>
+                  }
+                />
+              }
+              label={selectSeveral}
+            />
             <MenuPopup align="end">
               {sources.map((node) => (
                 <MenuItem key={node.id} onClick={() => onLinkSeveral(node.id)}>
@@ -1026,6 +1025,12 @@ function FleetCanvas({
           onPointerUp={(event) => endDrag(event, false)}
           onPointerCancel={(event) => endDrag(event, true)}
           onLostPointerCapture={(event) => endDrag(event, true)}
+          // Safari does not focus a clicked button, so its keys would skip the map.
+          onClick={(event) =>
+            (event.target as Element)
+              .closest<HTMLElement>("button[data-fleet-item]")
+              ?.focus({ preventScroll: true })
+          }
           onKeyDown={onKeyDown}
         >
           {view === null ? null : (
@@ -1111,20 +1116,18 @@ function FleetAttention({ graph }: { readonly graph: FleetGraph }) {
     }),
   ].join(", ");
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            tabIndex={0}
-            aria-label={label}
-            className="inline-flex size-6 items-center justify-center rounded-badge text-warning-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-          />
-        }
-      >
-        <TriangleAlertIcon aria-hidden className="size-3.5" />
-      </TooltipTrigger>
-      <TooltipPopup side="top">{label}</TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <span
+          tabIndex={0}
+          aria-label={label}
+          className="inline-flex size-6 items-center justify-center rounded-badge text-warning-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        />
+      }
+      label={label}
+    >
+      <TriangleAlertIcon aria-hidden className="size-3.5" />
+    </SharedTooltipTrigger>
   );
 }
 

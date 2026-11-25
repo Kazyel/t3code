@@ -1,4 +1,4 @@
-import type { PullRequestActor } from "@t3tools/contracts";
+import type { PullRequestActor, ScopedThreadRef } from "@t3tools/contracts";
 import { T, useGT, useMessages } from "gt-react";
 import {
   ChevronDownIcon,
@@ -9,6 +9,7 @@ import {
 import { useState, type ReactNode } from "react";
 
 import { RelativeTime } from "~/components/RelativeTime";
+import { useOpenLink } from "~/browser/useOpenLink";
 import { useClientSettings } from "~/hooks/useSettings";
 import { cn } from "~/lib/utils";
 import { formatFullTimestamp } from "~/timestampFormat";
@@ -26,11 +27,14 @@ import {
 export function PullRequestCommentTime({
   createdAt,
   url,
+  threadRef = null,
 }: {
   createdAt: string;
   url: string | null;
+  threadRef?: ScopedThreadRef | null;
 }) {
   const gt = useGT();
+  const openLink = useOpenLink(threadRef);
   const timestampFormat = useClientSettings((settings) => settings.timestampFormat);
   return (
     <Tooltip>
@@ -40,6 +44,10 @@ export function PullRequestCommentTime({
             <InlineButton
               tone="muted"
               render={<a href={url} target="_blank" rel="noopener noreferrer" />}
+              onClick={(event) => {
+                event.preventDefault();
+                void openLink(url, { event }).catch(console.error);
+              }}
             />
           ) : (
             <span className="text-muted-foreground" />

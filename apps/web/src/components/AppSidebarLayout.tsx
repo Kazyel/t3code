@@ -88,7 +88,7 @@ import {
   useSidebarVisibility,
 } from "./ui/sidebar";
 import { Button } from "./ui/button";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { SharedTooltipTrigger } from "./ui/shared-tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
@@ -458,25 +458,24 @@ function SidebarControl({ showSidebar }: { readonly showSidebar: boolean }) {
             ...(overviewShown && { opacity: 0 }),
           }}
         >
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <SidebarTrigger
-                  variant={isSidebarVisible && stageBackdropVariant ? "media-navigation" : "ghost"}
-                  className={cn(
-                    "pointer-events-auto",
-                    isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
-                  )}
-                  aria-label={gt("Toggle main sidebar")}
-                />
-              }
-            />
-            <TooltipPopup side="bottom">
-              {shortcutLabel
+          <SharedTooltipTrigger
+            render={
+              <SidebarTrigger
+                variant={isSidebarVisible && stageBackdropVariant ? "media-navigation" : "ghost"}
+                className={cn(
+                  "pointer-events-auto",
+                  isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
+                )}
+                aria-label={gt("Toggle main sidebar")}
+              />
+            }
+            label={
+              shortcutLabel
                 ? gt("Toggle main sidebar ({shortcut})", { shortcut: shortcutLabel })
-                : gt("Toggle main sidebar")}
-            </TooltipPopup>
-          </Tooltip>
+                : gt("Toggle main sidebar")
+            }
+            side="bottom"
+          />
         </div>
       ) : null}
       {showSidebar ? (
@@ -541,27 +540,24 @@ function NavigationHistoryButton({
   const shortcutLabel = shortcutLabelForCommand(keybindings, command);
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            // The trigger beside it switches to the media variant over the stage artwork.
-            variant={onStageBackdrop ? "media-navigation" : "ghost"}
-            size="icon-sm"
-            className={cn(onStageBackdrop && "relative top-auto translate-y-0")}
-            aria-label={label}
-            disabled={!canNavigate}
-            onClick={() => navigateHistory(direction)}
-          />
-        }
-      >
-        {/* The pen strokes these 16px glyphs at 1.5px: 2.25 on lucide's 24px grid. */}
-        <Icon className="size-4 text-sidebar-toggle" strokeWidth={2.25} />
-      </TooltipTrigger>
-      <TooltipPopup side="bottom">
-        {shortcutLabel ? gt("{label} ({shortcut})", { label, shortcut: shortcutLabel }) : label}
-      </TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <Button
+          // The trigger beside it switches to the media variant over the stage artwork.
+          variant={onStageBackdrop ? "media-navigation" : "ghost"}
+          size="icon-sm"
+          className={cn(onStageBackdrop && "relative top-auto translate-y-0")}
+          aria-label={label}
+          disabled={!canNavigate}
+          onClick={() => navigateHistory(direction)}
+        />
+      }
+      label={shortcutLabel ? gt("{label} ({shortcut})", { label, shortcut: shortcutLabel }) : label}
+      side="bottom"
+    >
+      {/* The pen strokes these 16px glyphs at 1.5px: 2.25 on lucide's 24px grid. */}
+      <Icon className="size-4 text-sidebar-toggle" strokeWidth={2.25} />
+    </SharedTooltipTrigger>
   );
 }
 

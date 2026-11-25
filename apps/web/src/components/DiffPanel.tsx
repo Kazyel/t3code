@@ -107,7 +107,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./ui/menu";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { SharedTooltipTrigger } from "./ui/shared-tooltip";
 import { useEnvironmentQuery, useEnvironmentQueryRefresh } from "../state/query";
 import { useAtomCommand } from "../state/use-atom-command";
 import { serverEnvironment } from "../state/server";
@@ -168,45 +168,43 @@ function DiffFileCollapseToggle({
 }) {
   const gt = useGT();
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            size="icon-micro"
-            variant="ghost"
-            className="-ms-0.5"
-            aria-label={
-              collapsed
-                ? gt("Expand {path}", { path: filePath })
-                : gt("Collapse {path}", { path: filePath })
-            }
-            aria-expanded={!collapsed}
-            ref={(node) => {
-              if (!node || !load) return;
-              return observeIntersection(
-                node,
-                (entry) => {
-                  if (entry.isIntersecting) load();
-                },
-                { rootMargin: "600px" },
-              );
-            }}
-            data-diff-file-key={fileKey}
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggle(fileKey);
-            }}
-          />
-        }
-      >
-        {collapsed ? (
-          <ChevronRightIcon className={cn("size-4", iconClassName)} />
-        ) : (
-          <ChevronDownIcon className={cn("size-4", iconClassName)} />
-        )}
-      </TooltipTrigger>
-      <TooltipPopup side="top">{collapsed ? gt("Expand diff") : gt("Collapse diff")}</TooltipPopup>
-    </Tooltip>
+    <SharedTooltipTrigger
+      render={
+        <Button
+          size="icon-micro"
+          variant="ghost"
+          className="-ms-0.5"
+          aria-label={
+            collapsed
+              ? gt("Expand {path}", { path: filePath })
+              : gt("Collapse {path}", { path: filePath })
+          }
+          aria-expanded={!collapsed}
+          ref={(node) => {
+            if (!node || !load) return;
+            return observeIntersection(
+              node,
+              (entry) => {
+                if (entry.isIntersecting) load();
+              },
+              { rootMargin: "600px" },
+            );
+          }}
+          data-diff-file-key={fileKey}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle(fileKey);
+          }}
+        />
+      }
+      label={collapsed ? gt("Expand diff") : gt("Collapse diff")}
+    >
+      {collapsed ? (
+        <ChevronRightIcon className={cn("size-4", iconClassName)} />
+      ) : (
+        <ChevronDownIcon className={cn("size-4", iconClassName)} />
+      )}
+    </SharedTooltipTrigger>
   );
 }
 
@@ -1045,25 +1043,21 @@ export default function DiffPanel({
         </DropdownMenuTrigger>
         {headerCommitSha !== null ? (
           selectedCommitUrl ? (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <InlineButton
-                    tone="muted"
-                    className="shrink-0"
-                    render={
-                      <a href={selectedCommitUrl} target="_blank" rel="noopener noreferrer" />
-                    }
-                    onClick={(event) => openCommitUrl(event, selectedCommitUrl)}
-                  />
-                }
-              >
-                <Text variant="meta" mono>
-                  {headerCommitSha.slice(0, 7)}
-                </Text>
-              </TooltipTrigger>
-              <TooltipPopup side="top">{selectedCommitUrl}</TooltipPopup>
-            </Tooltip>
+            <SharedTooltipTrigger
+              render={
+                <InlineButton
+                  tone="muted"
+                  className="shrink-0"
+                  render={<a href={selectedCommitUrl} target="_blank" rel="noopener noreferrer" />}
+                  onClick={(event) => openCommitUrl(event, selectedCommitUrl)}
+                />
+              }
+              label={selectedCommitUrl}
+            >
+              <Text variant="meta" mono>
+                {headerCommitSha.slice(0, 7)}
+              </Text>
+            </SharedTooltipTrigger>
           ) : (
             <span className="shrink-0 font-mono text-meta text-muted-foreground">
               {headerCommitSha.slice(0, 7)}
@@ -1150,31 +1144,29 @@ export default function DiffPanel({
                           selectedCommitSha === commit.sha && "surface-selected-soft",
                         )}
                       >
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <DropdownMenuRadioItem
-                                className="min-w-0 flex-1"
-                                value={`commit:${commit.sha}`}
-                                closeOnClick
-                              />
-                            }
-                          >
-                            <span className="flex items-center gap-3">
-                              <span className="min-w-0 flex-1 truncate">{commit.subject}</span>
-                              <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
-                                {formatRelativeTimeLabel(
-                                  commit.committedAt,
-                                  Date.parse(now),
-                                  messages,
-                                )}
-                              </span>
+                        <SharedTooltipTrigger
+                          render={
+                            <DropdownMenuRadioItem
+                              className="min-w-0 flex-1"
+                              value={`commit:${commit.sha}`}
+                              closeOnClick
+                            />
+                          }
+                          label={commit.subject}
+                          side="right"
+                          className="max-w-80"
+                        >
+                          <span className="flex items-center gap-3">
+                            <span className="min-w-0 flex-1 truncate">{commit.subject}</span>
+                            <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
+                              {formatRelativeTimeLabel(
+                                commit.committedAt,
+                                Date.parse(now),
+                                messages,
+                              )}
                             </span>
-                          </TooltipTrigger>
-                          <TooltipPopup side="right" className="max-w-80">
-                            {commit.subject}
-                          </TooltipPopup>
-                        </Tooltip>
+                          </span>
+                        </SharedTooltipTrigger>
                         {commitUrl ? (
                           <DropdownMenuItem
                             className="shrink-0"
@@ -1313,21 +1305,21 @@ export default function DiffPanel({
             base: comparisonBaseRef,
           })}
         >
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span className="hidden min-w-[min(3rem,calc(100%-2.75rem))] items-center gap-2 overflow-hidden @xl/diff-toolbar:flex" />
-              }
-            >
-              <span className="min-w-0 max-w-48 truncate">{comparisonHeadRef}</span>
-              <ArrowRightIcon className="size-3.5 shrink-0 opacity-70" />
-            </TooltipTrigger>
-            <TooltipPopup side="top">{`${comparisonHeadRef} → ${comparisonBaseRef}`}</TooltipPopup>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger render={<span aria-hidden className="hidden" />}>vs</TooltipTrigger>
-            <TooltipPopup side="top">{`${comparisonHeadRef} → ${comparisonBaseRef}`}</TooltipPopup>
-          </Tooltip>
+          <SharedTooltipTrigger
+            render={
+              <span className="hidden min-w-[min(3rem,calc(100%-2.75rem))] items-center gap-2 overflow-hidden @xl/diff-toolbar:flex" />
+            }
+            label={`${comparisonHeadRef} → ${comparisonBaseRef}`}
+          >
+            <span className="min-w-0 max-w-48 truncate">{comparisonHeadRef}</span>
+            <ArrowRightIcon className="size-3.5 shrink-0 opacity-70" />
+          </SharedTooltipTrigger>
+          <SharedTooltipTrigger
+            render={<span aria-hidden className="hidden" />}
+            label={`${comparisonHeadRef} → ${comparisonBaseRef}`}
+          >
+            vs
+          </SharedTooltipTrigger>
           <Combobox
             items={baseRefItems}
             filteredItems={filteredBaseRefItems}
@@ -1411,22 +1403,18 @@ export default function DiffPanel({
                             />
                           </div>
                         ) : choice.remote ? (
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <span className="flex justify-end text-muted-foreground">
-                                  <CheckIcon
-                                    role="img"
-                                    aria-label={gt("Remote only")}
-                                    className="size-3"
-                                  />
-                                </span>
-                              }
-                            />
-                            <TooltipPopup side="top">
-                              <T>Remote only</T>
-                            </TooltipPopup>
-                          </Tooltip>
+                          <SharedTooltipTrigger
+                            render={
+                              <span className="flex justify-end text-muted-foreground">
+                                <CheckIcon
+                                  role="img"
+                                  aria-label={gt("Remote only")}
+                                  className="size-3"
+                                />
+                              </span>
+                            }
+                            label={<T>Remote only</T>}
+                          />
                         ) : null}
                       </div>
                     </ComboboxItem>
@@ -1623,6 +1611,18 @@ export default function DiffPanel({
                   description={gt("There is nothing to show for this selection.")}
                 />
               )
+            ) : shownFileEntries.length === 0 && testFileCount > 0 ? (
+              <div className="flex h-full flex-wrap items-center justify-center gap-2 px-3 py-2 text-meta text-muted-foreground">
+                <p>
+                  {gt(
+                    "{count, plural, one {{count} test file hidden} other {{count} test files hidden}}",
+                    { count: testFileCount },
+                  )}
+                </p>
+                <InlineButton onClick={() => setHideTestFiles(false)}>
+                  {gt("Show test files")}
+                </InlineButton>
+              </div>
             ) : lazySource || renderablePatch?.kind === "files" ? (
               <div className="flex min-h-0 flex-1 overflow-hidden">
                 <div

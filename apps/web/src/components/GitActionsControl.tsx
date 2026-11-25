@@ -101,6 +101,7 @@ import {
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
+import { SharedTooltipTrigger } from "~/components/ui/shared-tooltip";
 import { useOpenInPreferredEditor } from "~/editorPreferences";
 import {
   useGitStackedAction,
@@ -346,18 +347,14 @@ function GitActionProgressButtonContent({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <p className="truncate pt-0.5 text-left text-caption text-muted-foreground" />
-              }
-            >
-              {progress.output}
-            </TooltipTrigger>
-            <TooltipPopup side="bottom" className="max-w-96 break-words">
-              {progress.output}
-            </TooltipPopup>
-          </Tooltip>
+          <SharedTooltipTrigger
+            render={<p className="truncate pt-0.5 text-left text-caption text-muted-foreground" />}
+            label={progress.output}
+            side="bottom"
+            className="max-w-96 break-words"
+          >
+            {progress.output}
+          </SharedTooltipTrigger>
         </div>
       </div>
     </div>
@@ -384,18 +381,14 @@ function GitActionSuccessButtonContent({ success }: { success: InlineGitActionSu
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <p className="truncate pt-0.5 text-left text-caption text-muted-foreground" />
-              }
-            >
-              {success.description}
-            </TooltipTrigger>
-            <TooltipPopup side="bottom" className="max-w-96 break-words">
-              {success.description}
-            </TooltipPopup>
-          </Tooltip>
+          <SharedTooltipTrigger
+            render={<p className="truncate pt-0.5 text-left text-caption text-muted-foreground" />}
+            label={success.description}
+            side="bottom"
+            className="max-w-96 break-words"
+          >
+            {success.description}
+          </SharedTooltipTrigger>
         </div>
       </div>
     </div>
@@ -1020,10 +1013,14 @@ function CheckoutGitActionsControl({
       </MenuItem>
     );
     return disabled && row.disabledReason ? (
-      <Tooltip key={row.key}>
-        <TooltipTrigger render={<span className="block" />}>{item}</TooltipTrigger>
-        <TooltipPopup side="left">{row.disabledReason}</TooltipPopup>
-      </Tooltip>
+      <SharedTooltipTrigger
+        key={row.key}
+        render={<span className="block" />}
+        label={row.disabledReason}
+        side="left"
+      >
+        {item}
+      </SharedTooltipTrigger>
     ) : (
       item
     );
@@ -1148,12 +1145,12 @@ function CheckoutGitActionsControl({
   const changesSummary = (
     <span className="ms-auto flex min-w-0 items-center gap-1 text-caption tabular-nums">
       {changesBaseLabel ? (
-        <Tooltip>
-          <TooltipTrigger render={<span className="min-w-0 truncate text-muted-foreground" />}>
-            {changesBaseLabel}
-          </TooltipTrigger>
-          <TooltipPopup side="top">{changesBaseLabel}</TooltipPopup>
-        </Tooltip>
+        <SharedTooltipTrigger
+          render={<span className="min-w-0 truncate text-muted-foreground" />}
+          label={changesBaseLabel}
+        >
+          {changesBaseLabel}
+        </SharedTooltipTrigger>
       ) : null}
       <span className="shrink-0 text-diff-addition">
         +{formatDiffCount(changesTotals?.insertions ?? 0)}
@@ -1198,28 +1195,21 @@ function CheckoutGitActionsControl({
             }
           >
             {isRepo && showActions ? (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <ThreadDetailsControl
-                      part="icon"
-                      aria-label={gt("Push branch")}
-                      disabled={
-                        !canWriteSourceControl ||
-                        isGitActionRunning ||
-                        !pushItem ||
-                        pushItem.disabled
-                      }
-                      onClick={() => void runGitActionWithToast({ action: "push" })}
-                    />
-                  }
-                >
-                  {gitActionProgress ? <Spinner size="xs" /> : <ArrowUpFromLineIcon />}
-                </TooltipTrigger>
-                <TooltipPopup>
-                  <T>Push branch</T>
-                </TooltipPopup>
-              </Tooltip>
+              <SharedTooltipTrigger
+                render={
+                  <ThreadDetailsControl
+                    part="icon"
+                    aria-label={gt("Push branch")}
+                    disabled={
+                      !canWriteSourceControl || isGitActionRunning || !pushItem || pushItem.disabled
+                    }
+                    onClick={() => void runGitActionWithToast({ action: "push" })}
+                  />
+                }
+                label={<T>Push branch</T>}
+              >
+                {gitActionProgress ? <Spinner size="xs" /> : <ArrowUpFromLineIcon />}
+              </SharedTooltipTrigger>
             ) : null}
             <Menu
               {...(menuOpen !== undefined ? { open: menuOpen } : {})}
@@ -1230,22 +1220,18 @@ function CheckoutGitActionsControl({
                 }
               }}
             >
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <MenuTrigger
-                      render={
-                        <ThreadDetailsControl part="icon" aria-label={gt("Git action options")} />
-                      }
-                    />
-                  }
-                >
-                  <EllipsisIcon />
-                </TooltipTrigger>
-                <TooltipPopup>
-                  <T>Git action options</T>
-                </TooltipPopup>
-              </Tooltip>
+              <SharedTooltipTrigger
+                render={
+                  <MenuTrigger
+                    render={
+                      <ThreadDetailsControl part="icon" aria-label={gt("Git action options")} />
+                    }
+                  />
+                }
+                label={<T>Git action options</T>}
+              >
+                <EllipsisIcon />
+              </SharedTooltipTrigger>
               <MenuPopup side="bottom" align="end" width="wide">
                 {showActions ? (
                   isRepo ? (
@@ -1295,28 +1281,24 @@ function CheckoutGitActionsControl({
               if (open) requestVcsStatusRefresh(refreshVcsStatus, activeEnvironmentId, gitCwd);
             }}
           >
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <MenuTrigger
-                    render={
-                      <Button
-                        size="icon-sm"
-                        variant="secondary"
-                        aria-label={gt("Git action options")}
-                        // Tooltip replaces the button data-slot, so toolbar theming needs a separate hook.
-                        data-toolbar-control=""
-                      />
-                    }
-                  />
-                }
-              >
-                <ChevronDownIcon />
-              </TooltipTrigger>
-              <TooltipPopup side="top">
-                <T>Git action options</T>
-              </TooltipPopup>
-            </Tooltip>
+            <SharedTooltipTrigger
+              render={
+                <MenuTrigger
+                  render={
+                    <Button
+                      size="icon-sm"
+                      variant="secondary"
+                      aria-label={gt("Git action options")}
+                      // Tooltip replaces the button data-slot, so toolbar theming needs a separate hook.
+                      data-toolbar-control=""
+                    />
+                  }
+                />
+              }
+              label={<T>Git action options</T>}
+            >
+              <ChevronDownIcon />
+            </SharedTooltipTrigger>
             <MenuPopup side="bottom" align="end">
               {gitItems}
             </MenuPopup>
@@ -1407,14 +1389,12 @@ function CheckoutGitActionsControl({
                   <T>Changes</T>
                 </span>
                 {changesBaseLabel ? (
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={<span className="min-w-0 truncate text-muted-foreground" />}
-                    >
-                      {changesBaseLabel}
-                    </TooltipTrigger>
-                    <TooltipPopup side="top">{changesBaseLabel}</TooltipPopup>
-                  </Tooltip>
+                  <SharedTooltipTrigger
+                    render={<span className="min-w-0 truncate text-muted-foreground" />}
+                    label={changesBaseLabel}
+                  >
+                    {changesBaseLabel}
+                  </SharedTooltipTrigger>
                 ) : null}
                 <span className="ms-auto flex shrink-0 items-baseline gap-2 ps-2 font-mono tabular-nums">
                   <span

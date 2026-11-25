@@ -79,7 +79,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../ui/empty";
 import { Skeleton } from "../ui/skeleton";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 import {
   WorkspaceBreadcrumb,
   WorkspaceBreadcrumbItem,
@@ -778,24 +778,19 @@ function UsageOverview({
                 : formatTokens(merged.totalTokens)}
             </p>
             <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Tooltip>
-                <TooltipTrigger render={<span tabIndex={0} />}>
-                  <span className={figureClass(loadingPartial)}>
-                    {gt(
-                      "{count, plural, one {{formatted} sessions} other {{formatted} sessions}}",
-                      {
-                        count: merged.sessions,
-                        formatted: formatCount(merged.sessions, locale),
-                      },
-                    )}
-                  </span>
-                </TooltipTrigger>
-                <TooltipPopup>
-                  {metric === "cost"
-                    ? gt("API cost estimate")
-                    : gt("Sessions with processed tokens")}
-                </TooltipPopup>
-              </Tooltip>
+              <SharedTooltipTrigger
+                render={<span tabIndex={0} />}
+                label={
+                  metric === "cost" ? gt("API cost estimate") : gt("Sessions with processed tokens")
+                }
+              >
+                <span className={figureClass(loadingPartial)}>
+                  {gt("{count, plural, one {{formatted} session} other {{formatted} sessions}}", {
+                    count: merged.sessions,
+                    formatted: formatCount(merged.sessions, locale),
+                  })}
+                </span>
+              </SharedTooltipTrigger>
               {metric === "cost" && merged.costQuality.unpricedShare > 0 && (
                 <Popover>
                   <PopoverTrigger
@@ -885,18 +880,18 @@ function UsageOverview({
                     awaitingData && "invisible",
                   )}
                 >
-                  <Tooltip>
-                    <TooltipTrigger render={<span tabIndex={0} />}>
-                      {metric === "cost"
-                        ? gt("{share} of cost", { share: formatPercent(share) })
-                        : gt("{share} of tokens", { share: formatPercent(share) })}
-                    </TooltipTrigger>
-                    <TooltipPopup>
-                      {metric === "cost"
+                  <SharedTooltipTrigger
+                    render={<span tabIndex={0} />}
+                    label={
+                      metric === "cost"
                         ? gt("{tokens} tokens", { tokens: formatTokens(totals?.totalTokens ?? 0) })
-                        : formatUsd(totals?.costUsd ?? 0, locale)}
-                    </TooltipPopup>
-                  </Tooltip>
+                        : formatUsd(totals?.costUsd ?? 0, locale)
+                    }
+                  >
+                    {metric === "cost"
+                      ? gt("{share} of cost", { share: formatPercent(share) })
+                      : gt("{share} of tokens", { share: formatPercent(share) })}
+                  </SharedTooltipTrigger>
                 </p>
               </div>
             );

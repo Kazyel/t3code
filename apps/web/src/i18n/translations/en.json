@@ -66,7 +66,7 @@
   "2f6e4f7cd364da73": "Expected",
   "9d11c93d4035de3e": "Happened",
   "c87d0595693704f9": "Did instead",
-  "d7a4ea6ce5af44e0": "{speaker} · {count} characters",
+  "ed5c85bb4aecb472": "{count, plural, one {{speaker} · {count} character} other {{speaker} · {count} characters}}",
   "f5114fb9c40fd929": "You",
   "cd03eb1b84271c02": "Agent",
   "bfe1a60f3f9c60fb": "Turn {turn} · {what}",
@@ -876,6 +876,10 @@
   "05b16c85cb1e18bd": "No repositories",
   "04ea9e0e663983fd": "All repositories",
   "c07bd24ff49e85d9": "{count, plural, one {{count} repository} other {{count} repositories}}",
+  "1b799ebfa94c2408": "Push hooks approval",
+  "81d703184fe5112e": "Run this repository's push hooks?",
+  "027b0d65c7a67af6": "Hook file",
+  "ade585910165bb52": "Configured hook",
   "e94aa66471dae6aa": "Why am I being asked this?",
   "228a325b5708e675": "Full access skips approvals, but an ask rule in the agent's own settings matches this action, so it still asks. Remove or narrow that rule to stop these prompts.",
   "3f9101f696c738a8": "Full access skips approvals, but the agent still stops for a few safety checks of its own that no setting can skip, such as a delete whose path it can't verify. T3 Code can't turn these off, so check the request and approve it if it's what you expect.",
@@ -1302,7 +1306,7 @@
   "c13753167634f7aa": "Read file",
   "5ce648cd03020fd9": "Read {path} +{count} more",
   "5d6c2898401c94e6": "Read {path}",
-  "612170d804b03320": "{count, plural, one {{count} malformed or inconsistent usage record(s) were skipped; usage may be incomplete.} other {{count} malformed or inconsistent usage record(s) were skipped; usage may be incomplete.}}",
+  "69150fe436b3a0c2": "{count, plural, one {{count} malformed or inconsistent usage record was skipped; usage may be incomplete.} other {{count} malformed or inconsistent usage records were skipped; usage may be incomplete.}}",
   "ee448ceb6820ce2f": "{environment} runs an older server version and is excluded from totals.",
   "732708950237004e": "This client is older than the server on {environment}; its usage is excluded from totals.",
   "9758c2ede06aa19b": "{hour} today",
@@ -1905,6 +1909,7 @@
   "1d384d4fe7888a09": "Your next message starts a fresh session.",
   "dcceb06d5e82f7e5": "Split terminal",
   "2b48708e23f31ab2": "Split terminal vertically",
+  "71ed7c0da0b93c77": "Your next message restarts the agent. This conversation is kept.",
   "e4b61c891fed297e": "Go to file",
   "d2ccdb8cd3297212": "Add project",
   "594bcbef04093f72": "Open WSL folder",
@@ -3637,7 +3642,10 @@
     {
       "t": "span",
       "i": 2,
-      "c": [" ", "on the computer that opened this page"]
+      "c": [
+        " ",
+        "on the computer that opened this page"
+      ]
     }
   ],
   "b2d53b4d1d48fbef": [
@@ -3649,7 +3657,10 @@
     {
       "t": "span",
       "i": 2,
-      "c": [" ", "· whoever runs it gets this access"]
+      "c": [
+        " ",
+        "· whoever runs it gets this access"
+      ]
     }
   ],
   "e0740b2e9ec8ebf7": [
@@ -3661,7 +3672,10 @@
     {
       "t": "span",
       "i": 2,
-      "c": [" ", "(whoever runs it gets this access)"]
+      "c": [
+        " ",
+        "(whoever runs it gets this access)"
+      ]
     }
   ],
   "c54cc9c75db9dc58": "Only approve a sign-in you just started.",
@@ -4724,6 +4738,8 @@
   "ac7416afe98ba5f8": "Terminal excerpt, {label}",
   "bf04d61dc50685dc": "Line {lineStart}",
   "000e3bef072f07c8": "Lines {lineStart}–{lineEnd}",
+  "f3c70064a22a0c76": "{terminalLabel} line {lineStart}",
+  "8ba6febaabeb6f14": "{terminalLabel} lines {lineStart}-{lineEnd}",
   "b3336a0e9a6e3fba": "Captured terminal output",
   "8d24730972ce4fd3": "Terminal excerpt, {label}, expired",
   "dd8f1439c88ef92b": "Terminal context expired. Remove and re-add {label} to include it in your message.",
@@ -6261,8 +6277,10 @@
   "9ceeca01c1c48b48": "No {platform} devices were listed because device discovery reported a problem.",
   "6cfe3b4931af6f8a": "Xcode is installed, but no iOS Simulator is available. Install a runtime in Xcode Settings → Components.",
   "22750cc2c6dc56c4": "The Android SDK is installed, but no virtual device exists. Create one in Android Studio → Device Manager.",
+  "dbc3908dc1f730ab": "The Android SDK is installed, but no Android device was found. Connect a phone with USB debugging on, or create a virtual device in Android Studio → Device Manager.",
   "600c3e7ff64413cf": "Xcode and iOS Simulator are available on {host}.",
   "2fbdc66961a873a6": "The Android SDK and Emulator are available on {host}.",
+  "2d99f80191b88ee4": "The Android SDK is available.",
   "7ff8efdb29b93b6d": "Set up devices",
   "a29a9a0c5fbba6b0": "Review what runs on this environment before using simulators and emulators.",
   "13c051bd01d4daf3": "Simulators",
@@ -6476,6 +6494,17 @@
   "2d7bd59c168a7f86": "Seek audio",
   "4acd198d86a05fe1": "Unmute",
   "7c9d104d5fc75704": "Mute",
+  "b6b07d6a9d9ac3d8": "No preview for this file",
+  "8fd3002cbb2d0528": [
+    "Save it to open in an app that supports ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " files."
+  ],
+  "d3170aa2bb08efbd": "Save it to open in an app that supports this format.",
   "46f943a30e259620": "Audio unavailable. Open {name}",
   "e2cf6b944d1d095d": "Audio unavailable. Retry {name}",
   "f08fb460ad4617d6": "Loading {name}",
@@ -6606,16 +6635,6 @@
   "a9abaaa4220eae21": "{error} Save it to open in another app.",
   "c508c9000d9656f8": "Font preview",
   "1c416d621d250be8": "The quick brown fox jumps over the lazy dog.",
-  "b6b07d6a9d9ac3d8": "No preview for this file",
-  "8fd3002cbb2d0528": [
-    "Save it to open in an app that supports ",
-    {
-      "i": 1,
-      "k": "_gt_value_1",
-      "v": "v"
-    },
-    " files."
-  ],
   "774654575f014b55": "Save it to open in an app that supports this format files.",
   "d7d08260f16b7828": "The file is still loading. Try again in a moment.",
   "76ebb03de52c92d6": "The text viewer stopped.",
@@ -11166,7 +11185,7 @@
   "33fbce50a4ea67e6": "Additional CLI arguments passed on session start.",
   "abdee70d90cb26a3": "Compact after 100,000 to 1,000,000 tokens. Leave empty to use Claude's default.",
   "f907b2466603538e": "When to compact an idle thread over 200,000 tokens: after you return, just before its prompt cache expires, or never. Overrides the default in Providers > Advanced.",
-  "484df18e29b21047": "Google accounts use your subscription; API keys and Agent Platform bill usage.",
+  "9610fb9f4d9849ec": "Google account and Gemini Enterprise use your existing plan. Gemini API key and Agent Platform charge per use to your key or Google Cloud project.",
   "931df01584748bf9": "Gemini or Vertex AI express key. Stored separately on the host.",
   "8bf0f6ed8dd4b77e": "Required for Gemini Enterprise. Agent Platform uses it when no API key is set.",
   "7c735c8fbd3fb6e3": "Region for Gemini Enterprise or Agent Platform.",
@@ -14115,11 +14134,11 @@
   "509a9c76494bfdba": "Wake thread now",
   "467c8192b9726ba6": "Un-settle thread",
   "9e8470dfcf1004d6": "Settle thread",
-  "a75fb28f41e65d1d": "{count, plural, =1 {Settled,} other {Settled {count},}}",
-  "0186f474fc350897": "{count, plural, =1 {Snoozed,} other {Snoozed {count},}}",
-  "1bc189242bfa159d": "{count, plural, =1 {Unpinned,} other {Unpinned {count},}}",
-  "0cb1701d57cffefc": "{count, plural, =1 {Archived,} other {Archived {count},}}",
-  "3cb98bdea58716bf": "{count, plural, =1 {Discarded,} other {Discarded {count},}}",
+  "a75fb28f41e65d1d": "{count, plural, =1 {Settled} other {Settled {count}}}",
+  "0186f474fc350897": "{count, plural, =1 {Snoozed} other {Snoozed {count}}}",
+  "1bc189242bfa159d": "{count, plural, =1 {Unpinned} other {Unpinned {count}}}",
+  "0cb1701d57cffefc": "{count, plural, =1 {Archived} other {Archived {count}}}",
+  "3cb98bdea58716bf": "{count, plural, =1 {Discarded} other {Discarded {count}}}",
   "d941432304b69645": "restarts in {seconds}s",
   "f511b80e4fa895b8": "restarting",
   "c85d558b9b692fd1": "downloading",
@@ -14870,5 +14889,6 @@
   "b7df38b7d8792d78": "Open guide",
   "9e91e9a77b664e4e": "Could not start a review guide",
   "99d51127f573296b": "Another account",
-  "8ec2c57414669b79": "Connect a second {tracker} workspace or user."
+  "8ec2c57414669b79": "Connect a second {tracker} workspace or user.",
+  "800966eb58181745": "Checking which languages the model supports…"
 }

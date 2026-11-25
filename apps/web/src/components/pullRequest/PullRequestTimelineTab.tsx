@@ -22,13 +22,13 @@ import { Branch, T, useGT, useMessages, Var } from "gt-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
-import { readLocalApi } from "~/localApi";
+import { useOpenLink } from "~/browser/useOpenLink";
 import { useRelativeTimeState } from "~/hooks/useRelativeTimeState";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 import {
   buildPullRequestRail,
   isPullRequestVerdictStale,
@@ -95,14 +95,12 @@ function RailRow({
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
           {children}
         </div>
-        <Tooltip>
-          <TooltipTrigger
-            render={<time dateTime={at} className="shrink-0 text-meta text-muted-foreground" />}
-          >
-            <TimelineRelativeTime timestamp={at} />
-          </TooltipTrigger>
-          <TooltipPopup>{new Date(at).toLocaleString()}</TooltipPopup>
-        </Tooltip>
+        <SharedTooltipTrigger
+          render={<time dateTime={at} className="shrink-0 text-meta text-muted-foreground" />}
+          label={new Date(at).toLocaleString()}
+        >
+          <TimelineRelativeTime timestamp={at} />
+        </SharedTooltipTrigger>
       </div>
       {body}
     </li>
@@ -238,6 +236,7 @@ function RailEntry({
 }) {
   const gt = useGT();
   const resolve = useMessages();
+  const openLink = useOpenLink(threadRef);
   const term = changeRequestTermKind(sourceControlClients.get(detail.provider).changeRequest);
   switch (entry.kind) {
     case "opened":
@@ -386,43 +385,38 @@ function RailEntry({
           <div className="flex min-h-6 min-w-0 items-center gap-2 text-body">
             <h2 className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
               <Actor actor={entry.comment.author} />
-              <Tooltip disabled={!stale}>
-                <TooltipTrigger render={<span className="text-muted-foreground" />}>
-                  {verb}
-                  {stale ? (
-                    <span className="sr-only">{gt(", before the latest commits")}</span>
-                  ) : null}
-                </TooltipTrigger>
-                <TooltipPopup>
-                  {pullRequestReviewOutcomeStaleLabel(entry.outcome, resolve)}
-                </TooltipPopup>
-              </Tooltip>
+              <SharedTooltipTrigger
+                render={<span className="text-muted-foreground" />}
+                label={pullRequestReviewOutcomeStaleLabel(entry.outcome, resolve)}
+                disabled={!stale}
+              >
+                {verb}
+                {stale ? (
+                  <span className="sr-only">{gt(", before the latest commits")}</span>
+                ) : null}
+              </SharedTooltipTrigger>
             </h2>
             {body && onAddToChat ? (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      size="icon-xs"
-                      variant="ghost-muted"
-                      aria-label={gt("Add to chat")}
-                      onClick={() => onAddToChat({ kind: "comment", comment: entry.comment })}
-                    />
-                  }
-                >
-                  <MessageSquarePlusIcon className="size-3" />
-                </TooltipTrigger>
-                <TooltipPopup>
-                  <T>Add to chat</T>
-                </TooltipPopup>
-              </Tooltip>
+              <SharedTooltipTrigger
+                render={
+                  <Button
+                    size="icon-xs"
+                    variant="ghost-muted"
+                    aria-label={gt("Add to chat")}
+                    onClick={() => onAddToChat({ kind: "comment", comment: entry.comment })}
+                  />
+                }
+                label={<T>Add to chat</T>}
+              >
+                <MessageSquarePlusIcon className="size-3" />
+              </SharedTooltipTrigger>
             ) : null}
             {reviewUrl ? (
               <Button
                 size="icon-xs"
                 variant="ghost-muted"
                 aria-label={gt("Open review on host")}
-                onClick={() => void readLocalApi()?.shell.openExternal(reviewUrl)}
+                onClick={(event) => void openLink(reviewUrl, { event }).catch(console.error)}
               >
                 <ExternalLinkIcon className="size-3" />
               </Button>

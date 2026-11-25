@@ -61,7 +61,7 @@ import {
 
 import type { SidebarThreadSummary } from "../types";
 import { Button } from "./ui/button";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { SharedTooltipTrigger } from "./ui/shared-tooltip";
 import {
   PULL_REQUEST_STATE_PRESENTATION,
   PullRequestGlyph,
@@ -561,31 +561,29 @@ export function ThreadLinkBadge({
   children: ReactNode;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger render={control}>
-        <span
-          className={cn(
-            "contents tabular-nums",
-            appearance === "number" ? "text-meta" : "font-normal text-xs",
-            toneClassName,
-          )}
-        >
-          <Icon aria-hidden className="size-3 shrink-0" />
-          <span className={cn("max-w-16 truncate", textClassName)}>{text}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipPopup
-        side="top"
-        sideOffset={0}
-        variant="popover"
-        className="pointer-events-auto w-80 max-w-[calc(100vw-2rem)] text-left whitespace-normal"
-        onContextMenu={(event) => event.stopPropagation()}
-      >
+    // The shared popup renders at the app root, so a right-click in it never reaches the row.
+    <SharedTooltipTrigger
+      render={control}
+      sideOffset={0}
+      variant="popover"
+      className="w-80 max-w-[calc(100vw-2rem)] text-left whitespace-normal"
+      label={
         <div className="-mx-1 max-h-[calc(var(--available-height)-0.5rem-2px)] overflow-y-auto overscroll-contain">
           {children}
         </div>
-      </TooltipPopup>
-    </Tooltip>
+      }
+    >
+      <span
+        className={cn(
+          "contents tabular-nums",
+          appearance === "number" ? "text-meta" : "font-normal text-xs",
+          toneClassName,
+        )}
+      >
+        <Icon aria-hidden className="size-3 shrink-0" />
+        <span className={cn("max-w-16 truncate", textClassName)}>{text}</span>
+      </span>
+    </SharedTooltipTrigger>
   );
 }
 
@@ -886,32 +884,30 @@ export function ThreadTerminalStatusButton({
     { count: terminalIds.length },
   );
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-micro"
-            aria-label={label}
-            data-testid={`sidebar-terminal-status-${threadRef.threadId}`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              revealThreadTerminal(threadRef, terminalId);
-              onThreadActivate(threadRef);
-            }}
-          />
-        }
-      >
-        <TerminalIcon
-          className={cn("size-3.5 motion-safe:animate-status-pulse", status?.colorClass)}
-          onAnimationStart={synchronizeTerminalPulse}
+    <SharedTooltipTrigger
+      render={
+        <Button
+          variant="ghost"
+          size="icon-micro"
+          aria-label={label}
+          data-testid={`sidebar-terminal-status-${threadRef.threadId}`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            revealThreadTerminal(threadRef, terminalId);
+            onThreadActivate(threadRef);
+          }}
         />
-      </TooltipTrigger>
-      <TooltipPopup side="top">{label}</TooltipPopup>
-    </Tooltip>
+      }
+      label={label}
+    >
+      <TerminalIcon
+        className={cn("size-3.5 motion-safe:animate-status-pulse", status?.colorClass)}
+        onAnimationStart={synchronizeTerminalPulse}
+      />
+    </SharedTooltipTrigger>
   );
 }
 
@@ -926,47 +922,43 @@ function ThreadStatusLabel({
   const label = m(status.label);
   if (compact) {
     return (
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <span
-              role="img"
-              aria-label={label}
-              className={`inline-flex size-3.5 shrink-0 items-center justify-center ${status.colorClass}`}
-            />
-          }
-        >
-          <span
-            className={`size-[9px] rounded-full ${status.dotClass} ${
-              status.pulse ? "motion-safe:animate-status-pulse" : ""
-            }`}
-          />
-        </TooltipTrigger>
-        <TooltipPopup side="top">{label}</TooltipPopup>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger
+      <SharedTooltipTrigger
         render={
           <span
             role="img"
             aria-label={label}
-            className={`inline-flex items-center gap-1 text-micro ${status.colorClass}`}
+            className={`inline-flex size-3.5 shrink-0 items-center justify-center ${status.colorClass}`}
           />
         }
+        label={label}
       >
         <span
-          className={`h-1.5 w-1.5 rounded-full ${status.dotClass} ${
+          className={`size-[9px] rounded-full ${status.dotClass} ${
             status.pulse ? "motion-safe:animate-status-pulse" : ""
           }`}
         />
-        <span className="hidden md:inline">{label}</span>
-      </TooltipTrigger>
-      <TooltipPopup side="top">{label}</TooltipPopup>
-    </Tooltip>
+      </SharedTooltipTrigger>
+    );
+  }
+
+  return (
+    <SharedTooltipTrigger
+      render={
+        <span
+          role="img"
+          aria-label={label}
+          className={`inline-flex items-center gap-1 text-micro ${status.colorClass}`}
+        />
+      }
+      label={label}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${status.dotClass} ${
+          status.pulse ? "motion-safe:animate-status-pulse" : ""
+        }`}
+      />
+      <span className="hidden md:inline">{label}</span>
+    </SharedTooltipTrigger>
   );
 }
 
@@ -1041,21 +1033,17 @@ export function ThreadRowLeadingStatus({ thread }: { thread: SidebarThreadSummar
       }
     >
       {prStatus && pr ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span
-                aria-label={prStatus.tooltip}
-                className={`inline-flex items-center justify-center ${prStatus.colorClass}`}
-              />
-            }
-          >
-            <ChangeRequestStatusIcon state={pr.state} isDraft={pr.isDraft} className="size-3" />
-          </TooltipTrigger>
-          <TooltipPopup side="top">
-            <PrStatusTooltipContent status={prStatus} />
-          </TooltipPopup>
-        </Tooltip>
+        <SharedTooltipTrigger
+          render={
+            <span
+              aria-label={prStatus.tooltip}
+              className={`inline-flex items-center justify-center ${prStatus.colorClass}`}
+            />
+          }
+          label={<PrStatusTooltipContent status={prStatus} />}
+        >
+          <ChangeRequestStatusIcon state={pr.state} isDraft={pr.isDraft} className="size-3" />
+        </SharedTooltipTrigger>
       ) : null}
       {pendingLink ? (
         <PullRequestGlyph.pullRequest
@@ -1098,40 +1086,34 @@ export function ThreadRowTrailingStatus({ thread }: { thread: SidebarThreadSumma
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5">
       {terminalStatus ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span
-                role="img"
-                aria-label={terminalStatus.label}
-                className={`inline-flex items-center justify-center ${terminalStatus.colorClass}`}
-              />
-            }
-          >
-            <TerminalIcon
-              className={`size-3 ${terminalStatus.pulse ? "motion-safe:animate-status-pulse" : ""}`}
-              onAnimationStart={synchronizeTerminalPulse}
+        <SharedTooltipTrigger
+          render={
+            <span
+              role="img"
+              aria-label={terminalStatus.label}
+              className={`inline-flex items-center justify-center ${terminalStatus.colorClass}`}
             />
-          </TooltipTrigger>
-          <TooltipPopup side="top">{terminalStatus.label}</TooltipPopup>
-        </Tooltip>
+          }
+          label={terminalStatus.label}
+        >
+          <TerminalIcon
+            className={`size-3 ${terminalStatus.pulse ? "motion-safe:animate-status-pulse" : ""}`}
+            onAnimationStart={synchronizeTerminalPulse}
+          />
+        </SharedTooltipTrigger>
       ) : null}
       {isRemoteThread ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span
-                aria-label={
-                  threadEnvironmentLabel ?? gt("Remote", { $context: "machine location" })
-                }
-                className="inline-flex items-center justify-center"
-              />
-            }
-          >
-            <EnvironmentMachineIcon kind={remoteMachine} className="size-3 text-dim-foreground" />
-          </TooltipTrigger>
-          <TooltipPopup side="top">{threadEnvironmentLabel}</TooltipPopup>
-        </Tooltip>
+        <SharedTooltipTrigger
+          render={
+            <span
+              aria-label={threadEnvironmentLabel ?? gt("Remote", { $context: "machine location" })}
+              className="inline-flex items-center justify-center"
+            />
+          }
+          label={threadEnvironmentLabel}
+        >
+          <EnvironmentMachineIcon kind={remoteMachine} className="size-3 text-dim-foreground" />
+        </SharedTooltipTrigger>
       ) : null}
     </span>
   );

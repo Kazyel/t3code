@@ -1,6 +1,8 @@
 import {
   FULL_ACCESS_OVERRIDE_QUESTION,
   fullAccessOverrideExplanation,
+  PUSH_HOOKS_APPROVAL_LABEL,
+  PUSH_HOOKS_APPROVAL_QUESTION,
 } from "@t3tools/client-runtime/state/thread-requests";
 import type {
   OrchestrationV2TurnItem,
@@ -40,6 +42,7 @@ import {
   DEFAULT_APPROVAL_OPTIONS,
   resolveApprovalPrimaryDecision,
 } from "./ComposerPendingApprovalActions";
+import { PushHooksApprovalDetails } from "./PushHooksApprovalDetails";
 import { TimelineApprovalCtx, TimelineRowCtx } from "./timelineRowContext";
 import { WorkLogRow, WorkLogTarget, WorkLogVerb } from "./WorkLog";
 
@@ -180,6 +183,9 @@ export function TimelineApprovalCard({
   const [alwaysAllow, setAlwaysAllow] = useState(false);
   const diffOpen = diffRequestId === approval.requestId;
   const presentation = APPROVAL_PRESENTATION[approval.requestKind];
+  // T3 Code's own question reads as the app asking: a plain sentence, then what it names.
+  const { pushHooks } = approval;
+  const label = pushHooks ? PUSH_HOOKS_APPROVAL_LABEL : presentation.label;
   const detail =
     approval.requestKind === "file-change"
       ? formatWorkspaceRelativeDetail(approval.detail, workspaceRoot)
@@ -241,8 +247,8 @@ export function TimelineApprovalCard({
     return () => document.removeEventListener("keydown", handler);
   }, [canUseShortcuts, primary, decline, paneFocusedRef]);
 
-  const cardTitle = title ?? m(presentation.label);
-  const cardAriaLabel = ariaLabel ?? m(presentation.label);
+  const cardTitle = title ?? m(label);
+  const cardAriaLabel = ariaLabel ?? m(label);
 
   return (
     <div
@@ -288,7 +294,14 @@ export function TimelineApprovalCard({
       </div>
 
       <div className="flex min-w-0 flex-col rounded-control surface-well">
-        {files.length > 0 ? (
+        {pushHooks ? (
+          <div className="flex min-w-0 flex-col gap-1.5 p-2.5">
+            <span className="text-meta text-foreground select-text! wrap-anywhere">
+              {m(PUSH_HOOKS_APPROVAL_QUESTION)}
+            </span>
+            <PushHooksApprovalDetails pushHooks={pushHooks} />
+          </div>
+        ) : files.length > 0 ? (
           <>
             {detail ? (
               <div

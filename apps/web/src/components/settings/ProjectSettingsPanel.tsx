@@ -74,6 +74,7 @@ import {
 import { useSettingsProjectGroups } from "./useSettingsProjectGroups";
 import { readUnloadedThreadCount } from "../../state/olderSettledShelf";
 import { settingsScopeEnvironmentLabels } from "./settingsScopeAxis";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 
 const ProjectIconPickerDialog = lazy(() =>
   import("./ProjectIconPickerDialog").then((module) => ({
@@ -566,12 +567,12 @@ function ProjectDetail({
                   <span className="block truncate">{labels.secondary}</span>
                 ) : null}
                 {!hasMultiple ? (
-                  <Tooltip>
-                    <TooltipTrigger render={<span className="block truncate font-mono" />}>
-                      {firstMember.workspaceRoot}
-                    </TooltipTrigger>
-                    <TooltipPopup>{firstMember.workspaceRoot}</TooltipPopup>
-                  </Tooltip>
+                  <SharedTooltipTrigger
+                    render={<span className="block truncate font-mono" />}
+                    label={firstMember.workspaceRoot}
+                  >
+                    {firstMember.workspaceRoot}
+                  </SharedTooltipTrigger>
                 ) : null}
               </>
             }
@@ -589,16 +590,14 @@ function ProjectDetail({
                     key={member.physicalProjectKey}
                     className="flex min-w-0 flex-col gap-1.5 @min-[36rem]/settings-row:flex-row @min-[36rem]/settings-row:items-center @min-[36rem]/settings-row:justify-between @min-[36rem]/settings-row:gap-3"
                   >
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <span className="min-w-0 max-w-full truncate font-mono text-meta text-muted-foreground/80" />
-                        }
-                      >
-                        {member.workspaceRoot}
-                      </TooltipTrigger>
-                      <TooltipPopup>{member.workspaceRoot}</TooltipPopup>
-                    </Tooltip>
+                    <SharedTooltipTrigger
+                      render={
+                        <span className="min-w-0 max-w-full truncate font-mono text-meta text-muted-foreground/80" />
+                      }
+                      label={member.workspaceRoot}
+                    >
+                      {member.workspaceRoot}
+                    </SharedTooltipTrigger>
                     <div className="shrink-0">{checkoutControls(member)}</div>
                   </div>
                 ))}

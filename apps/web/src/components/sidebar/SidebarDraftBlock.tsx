@@ -22,7 +22,6 @@ import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import { resolveSidebarRowAccessibility } from "../Sidebar.logic";
 import { ProjectFavicon, type ProjectFaviconProject } from "../ProjectFavicon";
 import { Button } from "../ui/button";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   composerDraftHasUserContent,
   DraftId,
@@ -38,6 +37,7 @@ import {
   SIDEBAR_CARD_META_LINE_CLASS_NAME,
   SIDEBAR_CARD_PROJECT_LABEL_CLASS_NAME,
 } from "./SidebarThreadRow";
+import { SharedTooltipTrigger } from "../ui/shared-tooltip";
 
 const EMPTY_COMPOSER_PARTS = {
   prompt: "",
@@ -183,23 +183,19 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
               )}
             >
               <span className="pointer-events-none inline-flex opacity-0 transition-opacity has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:opacity-100 group-any-hover/sidebar-row:pointer-events-auto group-any-hover/sidebar-row:opacity-100 motion-reduce:transition-none">
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant="ghost-muted"
-                        size="icon-micro"
-                        aria-label={gt("Discard draft")}
-                        onClick={handleDiscard}
-                      />
-                    }
-                  >
-                    <XIcon aria-hidden />
-                  </TooltipTrigger>
-                  <TooltipPopup side="top">
-                    <T>Discard draft</T>
-                  </TooltipPopup>
-                </Tooltip>
+                <SharedTooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost-muted"
+                      size="icon-micro"
+                      aria-label={gt("Discard draft")}
+                      onClick={handleDiscard}
+                    />
+                  }
+                  label={<T>Discard draft</T>}
+                >
+                  <XIcon aria-hidden />
+                </SharedTooltipTrigger>
               </span>
               {props.jumpLabel ? <JumpHintBadge label={props.jumpLabel} /> : null}
             </span>
